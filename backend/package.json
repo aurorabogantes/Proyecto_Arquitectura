@@ -1,0 +1,16 @@
+{
+    "name": "kids-coding-backend",
+    "version": "1.0.0",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "nodemon app.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "express-session": "1.17.3"
+    },
+    "devDependencies": {
+        "nodemon": "3.0.1"
+    }
+}
