@@ -33,4 +33,4 @@ const gamificationController = {
     }
 };
 
-module.export = gamificationController;
+module.exports = gamificationController;

@@ -8,4 +8,4 @@ const mediaController = {
     }
 };
 
-module.export = mediaController;
+module.exports = mediaController;

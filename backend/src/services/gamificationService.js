@@ -1,4 +1,4 @@
-const { badges: mockBadges, challenges: mockChallenges, levels: mockLevels, mockUser } = require('.../data/mockData');
+const { badges: mockBadges, challenges: mockChallenges, levels: mockLevels, mockUser } = require('../data/mockData');
 const Badge = require('../models/Badge');
 const Challenge = require('../models/Challenge');
 const User = require('../models/User');
