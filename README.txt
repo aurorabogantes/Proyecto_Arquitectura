@@ -1,9 +1,26 @@
+/* ============================================================
+   SCRIPT COMPLETO — Base de datos InnovacionEducativa
+   ============================================================
+   Incluye:
+   1) Script original de Kevin González (diseño de BD, cursos,
+      lecciones, recursos multimedia, gamificación)
+   2) Script complementario de José Esquivel (seguimiento del
+      progreso por estudiante y reportes para docentes/padres)
+   ============================================================ */
+
+
+/* ============================================================
+   PARTE 1 — Script original de Kevin González
+   (diseño de base de datos, RF-04 a RF-10, RF-16 a RF-18)
+   ============================================================ */
+
 /* Crear base de datos */
 
 CREATE DATABASE InnovacionEducativa;
-Go
+GO
 
 USE InnovacionEducativa;
+GO
 
 /* Crear tablas para la inserción de datos */
 CREATE TABLE Cursos(
@@ -394,15 +411,89 @@ SELECT * FROM Lecciones;
 SELECT * FROM RecursosMultimedia;
 
 
+/* ============================================================
+   PARTE 2 — Script complementario de Jose Esquivel
+   Seguimiento del progreso por estudiante 
+   Reportes para docentes y padres 
+   ============================================================ */
 
+/* Registra el avance de un estudiante lección por lección,
+   incluyendo el resultado de la evaluación si la lección la tiene. */
+CREATE TABLE ProgresoLeccion(
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    EstudianteId INT NOT NULL,
+    LeccionId INT NOT NULL,
+    Completado BIT DEFAULT 0,
+    Puntuacion DECIMAL(5,2) NULL,
+    FechaCompletado DATETIME NULL,
 
+    CONSTRAINT FK_ProgresoLeccion_Estudiante
+        FOREIGN KEY (EstudianteId) REFERENCES Estudiantes(EstudianteId),
 
+    CONSTRAINT FK_ProgresoLeccion_Leccion
+        FOREIGN KEY (LeccionId) REFERENCES Lecciones(LeccionId),
 
+    CONSTRAINT UQ_ProgresoLeccion_EstudianteLeccion
+        UNIQUE (EstudianteId, LeccionId)
+);
+GO
 
+/* Registra minutos de uso de la plataforma por día (RF-13, RF-23). */
+CREATE TABLE SesionUso(
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    EstudianteId INT NOT NULL,
+    Fecha DATE NOT NULL,
+    MinutosUso INT DEFAULT 0,
 
-* Esto es algo aparte *
+    CONSTRAINT FK_SesionUso_Estudiante
+        FOREIGN KEY (EstudianteId) REFERENCES Estudiantes(EstudianteId)
+);
+GO
 
-Para verificar el backend en linea se puede utilizar: 
+CREATE INDEX IX_ProgresoLeccion_Estudiante ON ProgresoLeccion(EstudianteId);
+CREATE INDEX IX_ProgresoLeccion_Leccion ON ProgresoLeccion(LeccionId);
+CREATE INDEX IX_SesionUso_Estudiante ON SesionUso(EstudianteId);
+GO
 
-http://localhost:3000/api/courses
+/* Datos de ejemplo para poder probar el módulo de una vez.
+   Como este script ya corre después de que Kevin insertó sus
+   cursos/lecciones en la Parte 1, aquí solo se agregan estudiantes,
+   matrícula y progreso de ejemplo (no duplica lo de arriba). */
 
+-- Un par de estudiantes de prueba (si no tienes ya alguno)
+IF NOT EXISTS (SELECT 1 FROM Estudiantes)
+BEGIN
+    INSERT INTO Estudiantes (Nombre, Avatar, FechaRegistro, Puntos, Racha)
+    VALUES ('Ana Pérez', '🦊', '2025-01-15', 350, 3),
+           ('Luis Rojas', '🐼', '2025-02-01', 120, 1);
+END
+GO
+
+-- Matricular al estudiante 1 en el curso 1 (Scratch)
+IF NOT EXISTS (SELECT 1 FROM EstudianteCurso WHERE EstudianteId = 1 AND CursoId = 1)
+BEGIN
+    INSERT INTO EstudianteCurso (EstudianteId, CursoId, FechaMatricula, Completado, Porcentaje)
+    VALUES (1, 1, '2025-03-01', 0, 50.00);
+END
+GO
+
+-- Progreso de lecciones del curso 1 para el estudiante 1
+INSERT INTO ProgresoLeccion (EstudianteId, LeccionId, Completado, Puntuacion, FechaCompletado)
+SELECT 1, LeccionId, 1, 90, GETDATE()
+FROM Lecciones
+WHERE CursoId = 1 AND LeccionId IN (
+    SELECT MIN(LeccionId) FROM Lecciones WHERE CursoId = 1
+);
+GO
+
+-- Tiempo de uso de ejemplo
+INSERT INTO SesionUso (EstudianteId, Fecha, MinutosUso)
+VALUES (1, CAST(GETDATE() AS DATE), 25),
+       (1, CAST(DATEADD(DAY, -1, GETDATE()) AS DATE), 15);
+GO
+
+/* Verificar los datos nuevos */
+
+SELECT * FROM ProgresoLeccion;
+
+SELECT * FROM SesionUso;
