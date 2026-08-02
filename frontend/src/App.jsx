@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import CoursesPage from './pages/CourseDetailPage';
+import CoursesPage from './pages/CoursesPage';
+import CourseDetailPage from './pages/CourseDetailPage';
 import GamificationPage from './pages/GamificationPage';
 import MediaLibraryPage from './pages/MediaLibraryPage';
 

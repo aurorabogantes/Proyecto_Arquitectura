@@ -1,18 +1,16 @@
-const { courses: mockCourses } = require('../data/mockData');
+const repository = require('../repositories/MediaRepository');
 
 class MediaService {
-    getAllMediaItems() {
-        const items = [];
-        mockCourses.forEach(course => {
-            (course.mediaItems || []).forEach(item => {
-                items.push({ ...item, courseId: course.id, courseTitle: course.title });
-            });
-        });
-        return items;
+    async getAllMediaItems() {
+        return await repository.obtenerMediaItems();
     }
 
-    getMediaByType(type) {
-        return this.getAllMediaItems().filter(item => item.type === type);
+    async getMediaByType(tipo) {
+        return await repository.obtenerMediaItems(tipo);
+    }
+
+    async getMediaByCourse(cursoId) {
+        return await repository.obtenerMediaPorCurso(cursoId);
     }
 }
 

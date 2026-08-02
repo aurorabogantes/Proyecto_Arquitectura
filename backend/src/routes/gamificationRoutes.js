@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const gamificationController = require('../controllers/gamificationController');
+const controller = require('../controllers/gamificationController');
 
-router.get('/dashboard', gamificationController.dashboard);
-router.post('/progress', gamificationController.updateProgress);
+router.get('/dashboard', controller.dashboard);
+router.get('/trivia', controller.trivia);
+router.post('/progress', controller.updateProgress);
+router.post('/points', controller.addPoints);
 
 module.exports = router;

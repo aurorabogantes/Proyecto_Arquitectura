@@ -1,36 +1,50 @@
 const gamificationService = require('../services/gamificationService');
 
 const gamificationController = {
-    dashboard(req, res) {
-        const levels = gamificationService.getAllLevels();
-        const user = gamificationService.getUserData(req.session.user);
-        const currentLevel = user.getLevel(levels);
-        const progress = user.getProgressToNextLevel(levels);
 
-        const badges = gamificationService.getAllBadges().map(b => ({
-            ...b, isEarned: b.isEarned(user)
-        }));
-
-        const challenges = gamificationService.getAllChallenges().map(c => {
-            const userProg = user.challengeProgress[c.id] || 0;
-            return {
-                ...c,
-                userProgress: userProg,
-                progressPct: c.getProgressPercentage(userProg),
-                isCompleted: c.isCompleted(userProg)
-            };
-        });
-
-        res.json({ user, badges, challenges, levels, currentLevel, progress });
+    async dashboard(req, res) {
+        try {
+            const estudianteId = parseInt(req.query.estudianteId) || 1;
+            const data = await gamificationService.getDashboard(estudianteId);
+            res.json(data);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
     },
 
-    updateProgress(req, res) {
-        const { challengeId, amount } = req.body;
-        req.session.user = gamificationService.updateChallengeProgress(
-            req.session.user, parseInt(challengeId), parseInt(amount) || 1
-        );
-        res.json({ success: true, user: req.session.user });
+    async updateProgress(req, res) {
+        try {
+            const { estudianteId, retoId, progreso } = req.body;
+            if (!estudianteId || !retoId) return res.status(400).json({ error: 'estudianteId y retoId son requeridos' });
+            await gamificationService.updateChallengeProgress(
+                parseInt(estudianteId), parseInt(retoId), parseInt(progreso) || 0
+            );
+            res.json({ success: true });
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    },
+
+    async addPoints(req, res) {
+        try {
+            const { estudianteId, puntos } = req.body;
+            if (!estudianteId || !puntos) return res.status(400).json({ error: 'estudianteId y puntos son requeridos' });
+            await gamificationService.addPoints(parseInt(estudianteId), parseInt(puntos));
+            res.json({ success: true });
+        } catch (error) {
+            res.status(400).json({ error: error.message });
+        }
+    },
+
+    async trivia(req, res) {
+        try {
+            const questions = await gamificationService.getTriviaQuestions();
+            res.json({ questions });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
     }
+
 };
 
 module.exports = gamificationController;
