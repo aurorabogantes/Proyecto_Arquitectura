@@ -5,7 +5,7 @@ async function obtenerCursos() {
         const pool = await sql.connect(config);
         const resultado = await pool.request().query(`
             SELECT CursoId, Titulo, Descripcion, Nivel, RangoEdad,
-                   Miniatura, Categoria, Puntos, Duracion
+                   Thumbnail, Categoria, Puntos, Duracion
             FROM Cursos
             ORDER BY CursoId
         `);
@@ -24,7 +24,7 @@ async function obtenerCurso(cursoId) {
             .input("cursoId", sql.Int, cursoId)
             .query(`
                 SELECT CursoId, Titulo, Descripcion, Nivel, RangoEdad,
-                       Miniatura, Categoria, Puntos, Duracion
+                       Thumbnail, Categoria, Puntos, Duracion
                 FROM Cursos WHERE CursoId = @cursoId
             `);
         if (cursoRes.recordset.length === 0) return null;
@@ -40,9 +40,9 @@ async function obtenerCurso(cursoId) {
         const mediaRes = await pool.request()
             .input("cursoId", sql.Int, cursoId)
             .query(`
-                SELECT MediaId, Tipo, Url, Titulo
-                FROM MediaItems WHERE CursoId = @cursoId
-                ORDER BY MediaId
+                SELECT RecursoId AS MediaId, Tipo, Url, Titulo
+                FROM RecursosMultimedia WHERE CursoId = @cursoId
+                ORDER BY RecursoId
             `);
 
         return {

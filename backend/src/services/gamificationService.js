@@ -7,19 +7,19 @@ const https = require('https');
 class GamificationService {
 
     async getDashboard(estudianteId) {
-        const [datosEstudiante, insignias, niveles, retos, insigniasGanadas, progresoRetos] = await Promise.all([
+        const [datosEstudiante, insignias, niveles, desafios, insigniasGanadas, progresoDesafios] = await Promise.all([
             repository.obtenerDatosEstudiante(estudianteId),
             repository.obtenerInsignias(),
             repository.obtenerNiveles(),
-            repository.obtenerRetos(),
+            repository.obtenerDesafios(),
             repository.obtenerInsigniasEstudiante(estudianteId),
-            repository.obtenerProgresoRetos(estudianteId)
+            repository.obtenerProgresoDesafios(estudianteId)
         ]);
 
         if (!datosEstudiante) throw new Error('Estudiante no encontrado');
 
         const challengeProgressMap = {};
-        Object.entries(progresoRetos).forEach(([k, v]) => {
+        Object.entries(progresoDesafios).forEach(([k, v]) => {
             challengeProgressMap[k] = v.progreso;
         });
 
@@ -32,15 +32,14 @@ class GamificationService {
             challengeProgress: challengeProgressMap,
             enrolledCourses: [],
             completedCourses: [],
-            joinedDate: datosEstudiante.FechaIngreso
+            joinedDate: datosEstudiante.FechaRegistro
         });
 
         const levelObjects = niveles.map(n => ({
-            level: n.Nivel,
+            level: n.NivelId,
             name: n.Nombre,
-            description: n.Descripcion,
-            minPoints: n.PuntosMin,
-            maxPoints: n.PuntosMax,
+            minPoints: n.MinPuntos,
+            maxPoints: n.MaxPuntos,
             icon: n.Icono,
             color: n.Color
         }));
@@ -58,18 +57,18 @@ class GamificationService {
             return { ...badge, isEarned: badge.isEarned(user) };
         });
 
-        const challengesWithProgress = retos.map(c => {
+        const challengesWithProgress = desafios.map(c => {
             const challenge = new Challenge({
-                id: c.RetoId,
+                id: c.DesafioId,
                 title: c.Titulo,
                 description: c.Descripcion,
                 icon: c.Icono,
                 reward: c.Recompensa,
                 type: c.Tipo,
-                target: c.Meta,
-                expiresIn: c.ExpiraEn
+                target: c.Objetivo,
+                expiresIn: c.Expira
             });
-            const userProg = user.challengeProgress[c.RetoId] || 0;
+            const userProg = user.challengeProgress[c.DesafioId] || 0;
             return {
                 ...challenge,
                 userProgress: userProg,
@@ -84,8 +83,8 @@ class GamificationService {
         return { user, badges: badgesWithStatus, challenges: challengesWithProgress, levels: levelObjects, currentLevel, progress };
     }
 
-    async updateChallengeProgress(estudianteId, retoId, progreso) {
-        await repository.actualizarProgresoReto(estudianteId, retoId, progreso);
+    async updateChallengeProgress(estudianteId, desafioId, progreso) {
+        await repository.actualizarProgresoDesafio(estudianteId, desafioId, progreso);
         return true;
     }
 

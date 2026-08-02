@@ -7,9 +7,9 @@ async function obtenerDatosEstudiante(estudianteId) {
             .input("estudianteId", sql.Int, estudianteId)
             .query(`
                 SELECT EstudianteId, Nombre,
-                       ISNULL(Puntos, 0)  AS Puntos,
-                       ISNULL(Racha, 0)   AS Racha,
-                       FechaIngreso
+                       ISNULL(Puntos, 0)       AS Puntos,
+                       ISNULL(Racha, 0)        AS Racha,
+                       FechaRegistro
                 FROM Estudiantes
                 WHERE EstudianteId = @estudianteId
             `);
@@ -36,7 +36,7 @@ async function obtenerNiveles() {
     try {
         const pool = await sql.connect(config);
         const resultado = await pool.request()
-            .query("SELECT * FROM Niveles ORDER BY Nivel");
+            .query("SELECT * FROM Niveles ORDER BY NivelId");
         return resultado.recordset;
     } catch (error) {
         console.log(error);
@@ -44,11 +44,11 @@ async function obtenerNiveles() {
     }
 }
 
-async function obtenerRetos() {
+async function obtenerDesafios() {
     try {
         const pool = await sql.connect(config);
         const resultado = await pool.request()
-            .query("SELECT * FROM Retos ORDER BY RetoId");
+            .query("SELECT * FROM Desafios ORDER BY DesafioId");
         return resultado.recordset;
     } catch (error) {
         console.log(error);
@@ -69,15 +69,15 @@ async function obtenerInsigniasEstudiante(estudianteId) {
     }
 }
 
-async function obtenerProgresoRetos(estudianteId) {
+async function obtenerProgresoDesafios(estudianteId) {
     try {
         const pool = await sql.connect(config);
         const resultado = await pool.request()
             .input("estudianteId", sql.Int, estudianteId)
-            .query(`SELECT RetoId, Progreso, Completado FROM EstudianteReto WHERE EstudianteId = @estudianteId`);
+            .query(`SELECT DesafioId, Progreso, Completado FROM ProgresoDesafio WHERE EstudianteId = @estudianteId`);
         const mapa = {};
         resultado.recordset.forEach(r => {
-            mapa[r.RetoId] = { progreso: r.Progreso, completado: !!r.Completado };
+            mapa[r.DesafioId] = { progreso: r.Progreso, completado: !!r.Completado };
         });
         return mapa;
     } catch (error) {
@@ -86,33 +86,33 @@ async function obtenerProgresoRetos(estudianteId) {
     }
 }
 
-async function actualizarProgresoReto(estudianteId, retoId, progreso) {
+async function actualizarProgresoDesafio(estudianteId, desafioId, progreso) {
     try {
         const pool = await sql.connect(config);
         const existe = await pool.request()
             .input("estudianteId", sql.Int, estudianteId)
-            .input("retoId", sql.Int, retoId)
-            .query(`SELECT Id FROM EstudianteReto WHERE EstudianteId = @estudianteId AND RetoId = @retoId`);
+            .input("desafioId",   sql.Int, desafioId)
+            .query(`SELECT Id FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
 
         if (existe.recordset.length > 0) {
             await pool.request()
                 .input("estudianteId", sql.Int, estudianteId)
-                .input("retoId", sql.Int, retoId)
-                .input("progreso", sql.Int, progreso)
+                .input("desafioId",   sql.Int, desafioId)
+                .input("progreso",    sql.Int, progreso)
                 .query(`
-                    UPDATE EstudianteReto
+                    UPDATE ProgresoDesafio
                     SET Progreso = @progreso,
-                        Completado = CASE WHEN @progreso >= (SELECT Meta FROM Retos WHERE RetoId = @retoId) THEN 1 ELSE 0 END
-                    WHERE EstudianteId = @estudianteId AND RetoId = @retoId
+                        Completado = CASE WHEN @progreso >= (SELECT Objetivo FROM Desafios WHERE DesafioId = @desafioId) THEN 1 ELSE 0 END
+                    WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId
                 `);
         } else {
             await pool.request()
                 .input("estudianteId", sql.Int, estudianteId)
-                .input("retoId", sql.Int, retoId)
-                .input("progreso", sql.Int, progreso)
+                .input("desafioId",   sql.Int, desafioId)
+                .input("progreso",    sql.Int, progreso)
                 .query(`
-                    INSERT INTO EstudianteReto (EstudianteId, RetoId, Progreso, Completado)
-                    VALUES (@estudianteId, @retoId, @progreso, 0)
+                    INSERT INTO ProgresoDesafio (EstudianteId, DesafioId, Progreso, Completado)
+                    VALUES (@estudianteId, @desafioId, @progreso, 0)
                 `);
         }
         return true;
@@ -141,14 +141,14 @@ async function otorgarInsignia(estudianteId, insigniaId) {
         const pool = await sql.connect(config);
         const existe = await pool.request()
             .input("estudianteId", sql.Int, estudianteId)
-            .input("insigniaId", sql.Int, insigniaId)
+            .input("insigniaId",   sql.Int, insigniaId)
             .query(`SELECT Id FROM EstudianteInsignia WHERE EstudianteId = @estudianteId AND InsigniaId = @insigniaId`);
 
         if (existe.recordset.length === 0) {
             await pool.request()
                 .input("estudianteId", sql.Int, estudianteId)
-                .input("insigniaId", sql.Int, insigniaId)
-                .query(`INSERT INTO EstudianteInsignia (EstudianteId, InsigniaId) VALUES (@estudianteId, @insigniaId)`);
+                .input("insigniaId",   sql.Int, insigniaId)
+                .query(`INSERT INTO EstudianteInsignia (EstudianteId, InsigniaId, FechaObtencion) VALUES (@estudianteId, @insigniaId, CAST(GETDATE() AS DATE))`);
             return true;
         }
         return false;
@@ -175,10 +175,10 @@ module.exports = {
     obtenerDatosEstudiante,
     obtenerInsignias,
     obtenerNiveles,
-    obtenerRetos,
+    obtenerDesafios,
     obtenerInsigniasEstudiante,
-    obtenerProgresoRetos,
-    actualizarProgresoReto,
+    obtenerProgresoDesafios,
+    actualizarProgresoDesafio,
     agregarPuntos,
     otorgarInsignia,
     obtenerCursosInscritosCount

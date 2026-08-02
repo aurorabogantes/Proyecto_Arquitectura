@@ -11,7 +11,7 @@ class CourseService {
             description: r.Descripcion,
             level: r.Nivel,
             ageRange: r.RangoEdad,
-            thumbnail: r.Miniatura,
+            thumbnail: r.Thumbnail,
             category: r.Categoria,
             points: r.Puntos,
             duration: r.Duracion
@@ -27,7 +27,7 @@ class CourseService {
             description: data.Descripcion,
             level: data.Nivel,
             ageRange: data.RangoEdad,
-            thumbnail: data.Miniatura,
+            thumbnail: data.Thumbnail,
             category: data.Categoria,
             points: data.Puntos,
             duration: data.Duracion,
