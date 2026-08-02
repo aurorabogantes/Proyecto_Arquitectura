@@ -1,5 +1,6 @@
 const repository = require("../repositories/CourseRepository");
 const Course = require("../models/Course");
+const gamificationService = require("./gamificationService");
 
 class CourseService {
 
@@ -47,7 +48,10 @@ class CourseService {
     }
 
     async enrollStudent(estudianteId, cursoId) {
-        return await repository.inscribirEstudiante(estudianteId, cursoId);
+        const resultado = await repository.inscribirEstudiante(estudianteId, cursoId);
+        // Evalúa desafíos de inscripción automáticamente (no bloquea la respuesta)
+        gamificationService.evaluarDesafiosTrasInscripcion(estudianteId).catch(() => {});
+        return resultado;
     }
 }
 

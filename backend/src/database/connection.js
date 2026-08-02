@@ -1,14 +1,8 @@
-const sql = require("mssql");
+const sql = require("mssql/msnodesqlv8");
 
 const config = {
-    user: "sa",
-    password: "Admin1234!", // La contraseña que le asignaste a sa
-    server: "DESKTOP-MD7MJ1N", // O "localhost"
-    database: "InnovacionEducativa",
-    options: {
-        encrypt: false,
-        trustServerCertificate: true
-    }
+    connectionString:
+        "Driver={SQL Server};Server=AURORAPC\\SQL2022;Database=InnovacionEducativa;Trusted_Connection=yes;TrustServerCertificate=yes;"
 };
 
 module.exports = { sql, config };

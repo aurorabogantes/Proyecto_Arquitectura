@@ -5,21 +5,24 @@ import CoursesPage from './pages/CoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
 import GamificationPage from './pages/GamificationPage';
 import MediaLibraryPage from './pages/MediaLibraryPage';
+import { NotificationProvider } from './context/NotificationContext';
 
 export default function App() {
     return (
-        <div className='d-flex flex-column min-vh-100'>
-            <Navbar />
-            <main className='flex-grow-1'>
-                <Routes>
-                    <Route path="/" element={<Navigate to="/courses" replace />} />
-                    <Route path="/courses" element={<CoursesPage />} />
-                    <Route path="/courses/:id" element={<CourseDetailPage />} />
-                    <Route path="/gamification" element={<GamificationPage />} />
-                    <Route path="/media" element={<MediaLibraryPage />} />
-                </Routes>
-            </main>
-            <Footer />
-        </div>
+        <NotificationProvider>
+            <div className='d-flex flex-column min-vh-100'>
+                <Navbar />
+                <main className='flex-grow-1'>
+                    <Routes>
+                        <Route path="/" element={<Navigate to="/courses" replace />} />
+                        <Route path="/courses" element={<CoursesPage />} />
+                        <Route path="/courses/:id" element={<CourseDetailPage />} />
+                        <Route path="/gamification" element={<GamificationPage />} />
+                        <Route path="/media" element={<MediaLibraryPage />} />
+                    </Routes>
+                </main>
+                <Footer />
+            </div>
+        </NotificationProvider>
     );
 }

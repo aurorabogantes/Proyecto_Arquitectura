@@ -90,7 +90,107 @@ class GamificationService {
 
     async addPoints(estudianteId, puntos) {
         await repository.agregarPuntos(estudianteId, puntos);
-        return true;
+        // Verificar y otorgar insignias basadas en puntos
+        const nuevasInsignias = await this.verificarInsignias(estudianteId);
+        return { nuevasInsignias };
+    }
+
+    // Comprueba qué insignias por puntos aún no tiene el estudiante y las otorga
+    async verificarInsignias(estudianteId) {
+        try {
+            const [insignias, ganadas, datos] = await Promise.all([
+                repository.obtenerInsignias(),
+                repository.obtenerInsigniasEstudiante(estudianteId),
+                repository.obtenerDatosEstudiante(estudianteId)
+            ]);
+            if (!datos) return [];
+            const nuevas = [];
+            for (const ins of insignias) {
+                if (ganadas.includes(ins.InsigniaId)) continue;
+                const porPuntos = !ins.Especial && ins.PuntosRequeridos > 0 && datos.Puntos >= ins.PuntosRequeridos;
+                if (porPuntos) {
+                    const otorgada = await repository.otorgarInsignia(estudianteId, ins.InsigniaId);
+                    if (otorgada) nuevas.push({ id: ins.InsigniaId, nombre: ins.Nombre, icono: ins.Icono, color: ins.Color });
+                }
+            }
+            return nuevas;
+        } catch (e) {
+            console.log('verificarInsignias:', e.message);
+            return [];
+        }
+    }
+
+    // ── Auto-evaluación de desafíos ──────────────────────────────────────
+
+    // Llamar después de que un estudiante se inscribe en un curso.
+    // Busca desafíos de tipo inscripción (descripción contiene "inscri")
+    // y actualiza su progreso con el conteo real de inscripciones.
+    async evaluarDesafiosTrasInscripcion(estudianteId) {
+        try {
+            const [desafios, total] = await Promise.all([
+                repository.obtenerDesafios(),
+                repository.obtenerCursosInscritosCount(estudianteId)
+            ]);
+            const relevantes = desafios.filter(d =>
+                d.Descripcion?.toLowerCase().includes('inscri') ||
+                d.Titulo?.toLowerCase().includes('inscri')
+            );
+            for (const d of relevantes) {
+                const progreso = Math.min(Number(total), d.Objetivo);
+                await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
+                if (progreso >= d.Objetivo) {
+                    await repository.agregarPuntos(estudianteId, d.Recompensa);
+                }
+            }
+        } catch (e) {
+            console.log('evaluarDesafiosTrasInscripcion:', e.message);
+        }
+    }
+
+    // Llamar después de completar una lección.
+    // Busca desafíos de tipo lección (descripción contiene "lección" o "lecciones")
+    // y actualiza con el conteo de lecciones completadas esta semana.
+    async evaluarDesafiosTrasLeccion(estudianteId) {
+        try {
+            const [desafios, total] = await Promise.all([
+                repository.obtenerDesafios(),
+                repository.obtenerLeccionesSemanalesCount(estudianteId)
+            ]);
+            const relevantes = desafios.filter(d =>
+                d.Descripcion?.toLowerCase().includes('lecci')
+            );
+            for (const d of relevantes) {
+                const progreso = Math.min(Number(total), d.Objetivo);
+                await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
+                if (progreso >= d.Objetivo) {
+                    await repository.agregarPuntos(estudianteId, d.Recompensa);
+                }
+            }
+        } catch (e) {
+            console.log('evaluarDesafiosTrasLeccion:', e.message);
+        }
+    }
+
+    // Llamar al terminar una trivia con N aciertos correctos.
+    // Busca desafíos de tipo trivia (descripción contiene "trivia")
+    // y añade los aciertos al progreso acumulado.
+    async evaluarDesafiosTrasTrivia(estudianteId, aciertos) {
+        try {
+            const desafios = await repository.obtenerDesafios();
+            const relevantes = desafios.filter(d =>
+                d.Descripcion?.toLowerCase().includes('trivia')
+            );
+            for (const d of relevantes) {
+                const estado = await repository.incrementarProgresoDesafio(
+                    estudianteId, d.DesafioId, aciertos
+                );
+                if (estado.Completado) {
+                    await repository.agregarPuntos(estudianteId, d.Recompensa);
+                }
+            }
+        } catch (e) {
+            console.log('evaluarDesafiosTrasTrivia:', e.message);
+        }
     }
 
     // Integración con Open Trivia Database (https://opentdb.com) – categoría 18: Computers

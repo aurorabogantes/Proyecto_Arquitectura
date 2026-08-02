@@ -29,8 +29,8 @@ const gamificationController = {
         try {
             const { estudianteId, puntos } = req.body;
             if (!estudianteId || !puntos) return res.status(400).json({ error: 'estudianteId y puntos son requeridos' });
-            await gamificationService.addPoints(parseInt(estudianteId), parseInt(puntos));
-            res.json({ success: true });
+            const resultado = await gamificationService.addPoints(parseInt(estudianteId), parseInt(puntos));
+            res.json({ success: true, ...resultado });
         } catch (error) {
             res.status(400).json({ error: error.message });
         }
@@ -42,6 +42,23 @@ const gamificationController = {
             res.json({ questions });
         } catch (error) {
             res.status(500).json({ error: error.message });
+        }
+    },
+
+    // POST /api/gamification/trivia-resultado  { estudianteId, aciertos }
+    // Registra aciertos de trivia hacia los desafíos relacionados y otorga puntos
+    async triviaResultado(req, res) {
+        try {
+            const { estudianteId, aciertos } = req.body;
+            if (!estudianteId) return res.status(400).json({ error: 'estudianteId es requerido' });
+            const n = parseInt(aciertos) || 0;
+            const [puntosResult] = await Promise.all([
+                gamificationService.addPoints(parseInt(estudianteId), n * 15),
+                gamificationService.evaluarDesafiosTrasTrivia(parseInt(estudianteId), n)
+            ]);
+            res.json({ success: true, puntosGanados: n * 15, nuevasInsignias: puntosResult.nuevasInsignias || [] });
+        } catch (error) {
+            res.status(400).json({ error: error.message });
         }
     }
 

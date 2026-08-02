@@ -1,5 +1,8 @@
 const repository = require("../repositories/ProgressRepository");
 const StudentProgress = require("../models/StudentProgress");
+const gamificationService = require("./gamificationService");
+
+const PUNTOS_POR_LECCION = 10; // puntos base al completar cualquier lección
 
 class ProgressService {
 
@@ -41,7 +44,13 @@ class ProgressService {
         if (!estudianteId || !leccionId) {
             throw new Error("estudianteId y leccionId son requeridos");
         }
-        return await repository.marcarLeccionCompletada(estudianteId, leccionId, puntuacion);
+        await repository.marcarLeccionCompletada(estudianteId, leccionId, puntuacion);
+        // Añadir puntos base + evaluar desafíos (no bloquea la respuesta)
+        Promise.all([
+            gamificationService.addPoints(estudianteId, PUNTOS_POR_LECCION),
+            gamificationService.evaluarDesafiosTrasLeccion(estudianteId)
+        ]).catch(() => {});
+        return true;
     }
 
     async getActivityHistory(estudianteId) {

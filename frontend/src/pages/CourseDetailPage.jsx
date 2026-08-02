@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchCourse, enrollCourse, completeLesson } from '../services/api';
+import { fetchCourse, enrollCourse, completeLesson, addPoints } from '../services/api';
 import { useUser } from '../context/UserContext';
+import LessonModal from '../components/LessonModal';
+import { useNotification } from '../context/NotificationContext';
 
 const LESSON_ICONS = {
     video:       '🎬',
@@ -20,12 +22,14 @@ export default function CourseDetailPage() {
     const { id } = useParams();
     const { studentId } = useUser();
 
-    const [course, setCourse]       = useState(null);
-    const [loading, setLoading]     = useState(true);
-    const [enrolling, setEnrolling] = useState(false);
-    const [enrolled, setEnrolled]   = useState(false);
-    const [activeMedia, setMedia]   = useState(null);
-    const [msg, setMsg]             = useState(null);
+    const [course, setCourse]           = useState(null);
+    const [loading, setLoading]         = useState(true);
+    const [enrolling, setEnrolling]     = useState(false);
+    const [enrolled, setEnrolled]       = useState(false);
+    const [activeMedia, setMedia]       = useState(null);
+    const [activeLesson, setLesson]     = useState(null);
+    const [completedIds, setCompleted]  = useState(new Set());
+    const { addNotification }           = useNotification();
 
     useEffect(() => {
         fetchCourse(id)
@@ -43,25 +47,37 @@ export default function CourseDetailPage() {
             const res = await enrollCourse(id, studentId);
             if (res.success) {
                 setEnrolled(true);
-                setMsg(res.alreadyEnrolled ? '¡Ya estabas inscrito! 👍' : '¡Inscripción exitosa! 🎉');
+                if (res.alreadyEnrolled) {
+                    addNotification({ type: 'info', message: '¡Ya estabas inscrito en este curso!' });
+                } else {
+                    addNotification({ type: 'success', message: `¡Inscripción exitosa! 🎓 Ahora puedes acceder a las lecciones de "${course?.title}"` });
+                }
             }
         } catch {
-            setMsg('Error al inscribirse. Intenta de nuevo.');
+            addNotification({ type: 'warning', message: 'Error al inscribirse. Intenta de nuevo.' });
         } finally {
             setEnrolling(false);
-            setTimeout(() => setMsg(null), 3000);
         }
     };
 
     const handleCompleteLesson = async (lessonId) => {
         try {
             await completeLesson(studentId, lessonId, 100);
-            setMsg('¡Lección completada! +10 puntos 🌟');
-            setTimeout(() => setMsg(null), 3000);
+            setCompleted(prev => new Set([...prev, lessonId]));
+            const res = await addPoints(studentId, 0); // solo para verificar insignias tras la lección
+            addNotification({ type: 'points', message: '¡Lección completada! +10 pts ⭐' });
+            (res?.nuevasInsignias || []).forEach(ins => addNotification({
+                type: 'badge',
+                message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
+            }));
+            setLesson(null);
         } catch {
             // silent
         }
     };
+
+    // Abre el modal de la lección; si es video e inscrito, también marca el sidebar
+    const handleOpenLesson = (lesson) => setLesson(lesson);
 
     if (loading) {
         return (
@@ -83,18 +99,12 @@ export default function CourseDetailPage() {
     const lvl = LEVEL_COLORS[course.level] || { bg: '#e9ecef', text: '#495057' };
 
     return (
+        <>
         <div className="container py-5">
             {/* Back */}
             <Link to="/courses" className="btn btn-outline-secondary rounded-pill mb-4">
                 ← Volver a cursos
             </Link>
-
-            {/* Alert */}
-            {msg && (
-                <div className="alert alert-info alert-dismissible rounded-3 mb-4" role="alert">
-                    {msg}
-                </div>
-            )}
 
             <div className="row g-4">
                 {/* Left: course info */}
@@ -140,34 +150,38 @@ export default function CourseDetailPage() {
                             <div className="card-body p-4">
                                 <h4 className="section-title">Contenido del curso</h4>
                                 <div className="d-flex flex-column gap-2">
-                                    {course.lessons.map((lesson, i) => (
-                                        <div
-                                            key={lesson.id}
-                                            className="lesson-item d-flex align-items-center gap-3 p-3"
-                                        >
-                                            <span className="lesson-type-icon">
-                                                {LESSON_ICONS[lesson.type] || '📄'}
-                                            </span>
-                                            <div className="flex-grow-1">
-                                                <div className="fw-semibold">
-                                                    {i + 1}. {lesson.title}
+                                    {course.lessons.map((lesson, i) => {
+                                        const isDone = completedIds.has(lesson.id);
+                                        return (
+                                            <div
+                                                key={lesson.id}
+                                                className="lesson-item d-flex align-items-center gap-3 p-3"
+                                                style={{ cursor: 'pointer', opacity: isDone ? .7 : 1 }}
+                                                onClick={() => handleOpenLesson(lesson)}
+                                            >
+                                                <span className="lesson-type-icon">
+                                                    {isDone ? '✅' : (LESSON_ICONS[lesson.type] || '📄')}
+                                                </span>
+                                                <div className="flex-grow-1">
+                                                    <div className={`fw-semibold ${isDone ? 'text-success text-decoration-line-through' : ''}`}>
+                                                        {i + 1}. {lesson.title}
+                                                    </div>
+                                                    <div className="text-muted small">
+                                                        ⏱ {lesson.duration}
+                                                        {' · '}
+                                                        <span className="text-capitalize">{lesson.type}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="text-muted small">
-                                                    ⏱ {lesson.duration}
-                                                    {' · '}
-                                                    <span className="text-capitalize">{lesson.type}</span>
-                                                </div>
+                                                <span className={`badge rounded-pill small ${
+                                                    isDone ? 'bg-success' :
+                                                    enrolled ? 'bg-light text-dark border' :
+                                                    'bg-secondary text-white'
+                                                }`}>
+                                                    {isDone ? '✓ Hecho' : enrolled ? 'Abrir →' : '🔒'}
+                                                </span>
                                             </div>
-                                            {enrolled && (
-                                                <button
-                                                    className="btn btn-sm btn-outline-success rounded-pill"
-                                                    onClick={() => handleCompleteLesson(lesson.id)}
-                                                >
-                                                    ✓ Completar
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -240,5 +254,18 @@ export default function CourseDetailPage() {
                 </div>
             </div>
         </div>
+
+        {/* Lesson modal */}
+        {activeLesson && (
+            <LessonModal
+                lesson={activeLesson}
+                course={course}
+                onClose={() => setLesson(null)}
+                onComplete={() => handleCompleteLesson(activeLesson.id)}
+                onEnroll={handleEnroll}
+                isEnrolled={enrolled}
+            />
+        )}
+        </>
     );
 }

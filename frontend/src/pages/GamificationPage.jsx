@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchDashboard, fetchTrivia, updateProgress, addPoints } from '../services/api';
+import { fetchDashboard, fetchTrivia, updateProgress, addPoints, triviaResultado } from '../services/api';
 import { useUser } from '../context/UserContext';
+import { useNotification } from '../context/NotificationContext';
 
 // Decode HTML entities returned by Open Trivia DB
 function decodeHtml(html) {
@@ -231,21 +232,43 @@ function BadgeChip({ badge, showLocked = false }) {
     );
 }
 
-function ChallengesTab({ challenges, studentId, onRefresh }) {
-    const [updating, setUpdating] = useState(null);
+function ChallengesTab({ challenges: initialChallenges, studentId, onRefresh }) {
+    const [challenges, setChallenges] = useState(initialChallenges);
+    const [updating, setUpdating]     = useState(null);
+    const { addNotification }         = useNotification();
+
+    useEffect(() => { setChallenges(initialChallenges); }, [initialChallenges]);
 
     const handleProgress = async (challenge) => {
-        if (challenge.isCompleted) return;
+        if (challenge.isCompleted || updating) return;
         setUpdating(challenge.id);
+
+        const newProg = Math.min((challenge.userProgress || 0) + 1, challenge.target);
+        const nowDone = newProg >= challenge.target;
+
+        setChallenges(prev => prev.map(c => c.id === challenge.id ? {
+            ...c,
+            userProgress: newProg,
+            progressPct: Math.min(Math.round((newProg / c.target) * 100), 100),
+            isCompleted: nowDone
+        } : c));
+
         try {
-            const newProg = Math.min((challenge.userProgress || 0) + 1, challenge.target);
             await updateProgress(studentId, challenge.id, newProg);
-            if (newProg >= challenge.target) {
-                await addPoints(studentId, challenge.reward);
+            if (nowDone) {
+                const res = await addPoints(studentId, challenge.reward);
+                addNotification({
+                    type: 'success',
+                    message: `¡Reto completado! ${challenge.icon} "${challenge.title}" +${challenge.reward} pts`
+                });
+                (res?.nuevasInsignias || []).forEach(ins => addNotification({
+                    type: 'badge',
+                    message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
+                }));
             }
             onRefresh();
         } catch {
-            // silent
+            setChallenges(initialChallenges);
         } finally {
             setUpdating(null);
         }
@@ -253,13 +276,14 @@ function ChallengesTab({ challenges, studentId, onRefresh }) {
 
     return (
         <div>
+
             <h5 className="section-title">Retos activos</h5>
             <div className="row g-3">
                 {challenges.map(c => (
                     <div key={c.id} className="col-12 col-md-6">
                         <div
                             className={`card border-0 rounded-4 p-3 h-100 ${c.isCompleted ? 'bg-success bg-opacity-10' : ''}`}
-                            style={{ boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}
+                            style={{ boxShadow: '0 2px 12px rgba(0,0,0,.06)', transition: 'all .2s' }}
                         >
                             <div className="d-flex align-items-center gap-3 mb-2">
                                 <span style={{ fontSize: '2rem' }}>{c.icon}</span>
@@ -269,29 +293,37 @@ function ChallengesTab({ challenges, studentId, onRefresh }) {
                                 </div>
                                 <span className="badge bg-warning text-dark rounded-pill">+{c.reward} pts</span>
                             </div>
-                            <div className="progress" style={{ height: 8, borderRadius: 99 }}>
+
+                            <div className="progress mb-2" style={{ height: 10, borderRadius: 99 }}>
                                 <div
-                                    className={`progress-bar ${c.isCompleted ? 'bg-success' : ''}`}
+                                    className="progress-bar"
                                     style={{
                                         width: `${c.progressPct}%`,
-                                        background: c.isCompleted ? undefined : 'linear-gradient(90deg,#9B59B6,#4ECDC4)',
-                                        borderRadius: 99
+                                        borderRadius: 99,
+                                        background: c.isCompleted
+                                            ? '#28a745'
+                                            : 'linear-gradient(90deg,#9B59B6,#4ECDC4)',
+                                        transition: 'width .4s ease'
                                     }}
                                 />
                             </div>
-                            <div className="d-flex justify-content-between align-items-center mt-2">
+
+                            <div className="d-flex justify-content-between align-items-center">
                                 <span className="text-muted small">
-                                    {c.userProgress}/{c.target} · ⏰ {c.expiresIn}
+                                    <strong>{c.userProgress}</strong>/{c.target}
+                                    {' · '}⏰ {c.expiresIn}
                                 </span>
                                 {c.isCompleted ? (
-                                    <span className="badge bg-success rounded-pill">✓ Completado</span>
+                                    <span className="badge bg-success rounded-pill px-3 py-2">✓ Completado</span>
                                 ) : (
                                     <button
-                                        className="btn btn-sm btn-secondary-custom rounded-pill"
+                                        className="btn btn-sm btn-secondary-custom rounded-pill px-3"
                                         onClick={() => handleProgress(c)}
-                                        disabled={updating === c.id}
+                                        disabled={!!updating}
                                     >
-                                        {updating === c.id ? '...' : '+ Avanzar'}
+                                        {updating === c.id ? (
+                                            <span className="spinner-border spinner-border-sm" />
+                                        ) : '+ Avanzar'}
                                     </button>
                                 )}
                             </div>
@@ -311,6 +343,7 @@ function TriviaTab({ studentId, onRefresh }) {
     const [finished, setFinished]     = useState(false);
     const [loading, setLoading]       = useState(false);
     const [started, setStarted]       = useState(false);
+    const { addNotification }         = useNotification();
 
     const startTrivia = async () => {
         setLoading(true);
@@ -337,10 +370,19 @@ function TriviaTab({ studentId, onRefresh }) {
 
         setTimeout(async () => {
             if (current + 1 >= questions.length) {
+                const totalAciertos = score + (correct ? 1 : 0);
                 setFinished(true);
-                const pts = score + (correct ? 1 : 0);
-                if (pts > 0) {
-                    try { await addPoints(studentId, pts * 15); onRefresh(); } catch { /* silent */ }
+                // Registra puntos + progreso en desafío "Quiz Master" en el backend
+                if (totalAciertos > 0) {
+                    try {
+                        const res = await triviaResultado(studentId, totalAciertos);
+                        addNotification({ type: 'points', message: `¡Trivia completada! +${res.puntosGanados || 0} pts` });
+                        (res?.nuevasInsignias || []).forEach(ins => addNotification({
+                            type: 'badge',
+                            message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
+                        }));
+                        onRefresh();
+                    } catch { /* silent */ }
                 }
             } else {
                 setCurrent(c => c + 1);
