@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { fetchMediaLibrary } from '../services/api';
+import Icon from '../components/Icon';
 
 const TYPE_FILTERS = [
-    { value: '',       label: '🌐 Todo' },
-    { value: 'video',  label: '🎬 Videos' },
-    { value: 'image',  label: '🖼️ Imágenes' }
+    { value: '',       label: 'Todo' },
+    { value: 'video',  label: <><Icon name="video" /> Videos</> },
+    { value: 'image',  label: <><Icon name="image" /> Imágenes</> }
 ];
 
 export default function MediaLibraryPage() {
@@ -29,7 +30,7 @@ export default function MediaLibraryPage() {
                 style={{ background: 'linear-gradient(135deg, #45B7D1, #96CEB4)', borderRadius: '0 0 32px 32px' }}
             >
                 <div className="container text-center">
-                    <h2 className="fw-black mb-1">🎬 Biblioteca Multimedia</h2>
+                    <h2 className="fw-black mb-1"><Icon name="video" /> Biblioteca Multimedia</h2>
                     <p className="mb-0 opacity-90">Videos, animaciones e imágenes educativas</p>
                 </div>
             </div>
@@ -54,7 +55,7 @@ export default function MediaLibraryPage() {
                     </div>
                 ) : items.length === 0 ? (
                     <div className="empty-state">
-                        <div className="icon">🎞️</div>
+                        <div className="icon"><Icon name="image" /></div>
                         <p className="fs-5">No hay recursos en esta categoría</p>
                     </div>
                 ) : (
@@ -85,7 +86,7 @@ export default function MediaLibraryPage() {
                             <div className="modal-body p-3">
                                 <img src={modal.Url} alt={modal.Titulo} className="img-fluid rounded-3 w-100" />
                                 {modal.TituloCurso && (
-                                    <p className="text-muted small mt-2 mb-0">📚 Curso: {modal.TituloCurso}</p>
+                                    <p className="text-muted small mt-2 mb-0"><i className="bi bi-journal-bookmark me-1" /> Curso: {modal.TituloCurso}</p>
                                 )}
                             </div>
                         </div>
@@ -123,8 +124,8 @@ function MediaCard({ item, onOpen }) {
                             className="w-100"
                             style={{ height: 200, objectFit: 'cover' }}
                         />
-                        <div className="position-absolute top-0 end-0 m-2 badge bg-primary rounded-pill small">
-                            🔍 Ver
+                            <div className="position-absolute top-0 end-0 m-2 badge bg-primary rounded-pill small">
+                            Ver
                         </div>
                     </div>
                 )}
@@ -132,7 +133,7 @@ function MediaCard({ item, onOpen }) {
                 <div className="card-body p-3">
                     <div className="d-flex align-items-start justify-content-between gap-2">
                         <div>
-                            <span
+                                <span
                                 className="media-type-badge badge me-1"
                                 style={{
                                     position: 'static',
@@ -140,11 +141,11 @@ function MediaCard({ item, onOpen }) {
                                     color: isVideo ? '#FF6B6B' : '#4ECDC4'
                                 }}
                             >
-                                {isVideo ? '🎬 Video' : '🖼️ Imagen'}
+                                {isVideo ? <><Icon name="video" /> Video</> : <><Icon name="image" /> Imagen</>}
                             </span>
                             <h6 className="fw-bold mt-2 mb-1">{item.Titulo}</h6>
                             {item.TituloCurso && (
-                                <p className="text-muted small mb-0">📚 {item.TituloCurso}</p>
+                                <p className="text-muted small mb-0"><i className="bi bi-journal-bookmark me-1" /> {item.TituloCurso}</p>
                             )}
                         </div>
                     </div>

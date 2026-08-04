@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchDashboard, fetchTrivia, triviaResultado } from '../services/api';
 import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
+import Icon from '../components/Icon';
 
 // Decode HTML entities returned by Open Trivia DB
 function decodeHtml(html) {
@@ -37,7 +38,7 @@ export default function GamificationPage() {
     if (!data) {
         return (
             <div className="empty-state">
-                <div className="icon">⚠️</div>
+                <div className="icon"><i className="bi bi-exclamation-triangle-fill" /></div>
                 <p className="fs-5">No se pudo cargar el panel de gamificación.</p>
             </div>
         );
@@ -53,14 +54,14 @@ export default function GamificationPage() {
                 style={{ background: 'linear-gradient(135deg, #9B59B6, #4ECDC4)', borderRadius: '0 0 32px 32px' }}
             >
                 <div className="container d-flex flex-wrap align-items-center gap-4">
-                    <div className="fs-1">🏆</div>
+                    <div className="fs-1"><Icon name="trophy" size="2.5rem" /></div>
                     <div>
                         <h2 className="fw-black mb-0">¡Hola, {user?.name}!</h2>
                         <p className="mb-0 opacity-90">Tu panel de gamificación</p>
                     </div>
                     <div className="ms-auto d-flex gap-3">
-                        <StatPill icon="⭐" value={user?.points ?? 0} label="puntos" color="#FFD93D" />
-                        <StatPill icon="🔥" value={user?.streak ?? 0} label="días" color="#FF6B6B" />
+                        <StatPill icon={<Icon name="star" />} value={user?.points ?? 0} label="puntos" color="#FFD93D" />
+                        <StatPill icon={<Icon name="flame" />} value={user?.streak ?? 0} label="días" color="#FF6B6B" />
                     </div>
                 </div>
             </div>
@@ -72,10 +73,10 @@ export default function GamificationPage() {
                 {/* Tabs */}
                 <ul className="nav nav-pills mb-4 gap-2">
                     {[
-                        { id: 'overview',    label: '📊 Resumen' },
-                        { id: 'badges',      label: '🏅 Insignias' },
-                        { id: 'challenges',  label: '⚔️ Retos' },
-                        { id: 'trivia',      label: '🧠 Trivia' }
+                        { id: 'overview',    label: <><Icon name="star" /> Resumen</> },
+                        { id: 'badges',      label: <><Icon name="trophy" /> Insignias</> },
+                        { id: 'challenges',  label: <><Icon name="flame" /> Retos</> },
+                        { id: 'trivia',      label: <><Icon name="star" /> Trivia</> }
                     ].map(tab => (
                         <li key={tab.id} className="nav-item">
                             <button
@@ -164,16 +165,16 @@ function OverviewTab({ user, badges, challenges }) {
     return (
         <div className="row g-4">
             <div className="col-6 col-md-3">
-                <StatCard icon="⭐" value={user?.points ?? 0} label="Puntos totales" color="#FFD93D" />
+                <StatCard icon={<i className="bi bi-star-fill" />} value={user?.points ?? 0} label="Puntos totales" color="#FFD93D" />
             </div>
             <div className="col-6 col-md-3">
-                <StatCard icon="🔥" value={user?.streak ?? 0} label="Días seguidos" color="#FF6B6B" />
+                <StatCard icon={<i className="bi bi-fire" />} value={user?.streak ?? 0} label="Días seguidos" color="#FF6B6B" />
             </div>
             <div className="col-6 col-md-3">
-                <StatCard icon="🏅" value={`${earned}/${badges.length}`} label="Insignias" color="#9B59B6" />
+                <StatCard icon={<i className="bi bi-trophy-fill" />} value={`${earned}/${badges.length}`} label="Insignias" color="#9B59B6" />
             </div>
             <div className="col-6 col-md-3">
-                <StatCard icon="✅" value={`${completed}/${challenges.length}`} label="Retos completados" color="#4ECDC4" />
+                <StatCard icon={<i className="bi bi-check-lg" />} value={`${completed}/${challenges.length}`} label="Retos completados" color="#4ECDC4" />
             </div>
 
             {/* Recent badges */}
@@ -220,12 +221,22 @@ function BadgeChip({ badge, showLocked = false }) {
             style={{ background: badge.isEarned ? (badge.color + '22') : '#f8f9fa', border: `2px solid ${badge.isEarned ? badge.color : '#dee2e6'}` }}
             title={badge.description}
         >
-            <div className="badge-icon">{badge.icon}</div>
+            <div className="badge-icon">{getBadgeIcon(badge)}</div>
             <div className="fw-semibold small mt-1" style={{ fontSize: '.7rem', lineHeight: 1.2 }}>
                 {badge.name}
             </div>
         </div>
     );
+}
+
+function getBadgeIcon(badge) {
+    const name = (badge?.name || '').toLowerCase();
+    let icon = 'trophy-fill';
+    if (name.includes('racha') || name.includes('dia') || name.includes('días') || name.includes('streak')) icon = 'fire';
+    else if (name.includes('proyecto') || name.includes('project')) icon = 'tools';
+    else if (name.includes('quiz') || name.includes('trivia')) icon = 'question-circle-fill';
+    else if (name.includes('curso') || name.includes('complet')) icon = 'trophy-fill';
+    return <i className={`bi bi-${icon}`} style={{fontSize:'1.6rem'}} />;
 }
 
 function ChallengesTab({ challenges }) {
@@ -341,14 +352,14 @@ function TriviaTab({ studentId, onRefresh }) {
     if (!started) {
         return (
             <div className="text-center py-5">
-                <div className="display-3 mb-3">🧠</div>
+                <div className="display-3 mb-3"><i className="bi bi-brain" style={{fontSize:'3.2rem'}} /></div>
                 <h4 className="fw-bold mb-2">Quiz de Programación</h4>
                 <p className="text-muted mb-4">
                     Responde 5 preguntas sobre tecnología y gana <strong>hasta 75 puntos</strong>.<br />
                     Preguntas obtenidas en tiempo real desde <em>Open Trivia DB</em>.
                 </p>
                 <button className="btn btn-primary-custom px-5 py-2 fs-5" onClick={startTrivia}>
-                    ¡Iniciar Trivia! 🚀
+                    <i className="bi bi-rocket-fill me-2" /> ¡Iniciar Trivia!
                 </button>
             </div>
         );
@@ -376,19 +387,19 @@ function TriviaTab({ studentId, onRefresh }) {
         const ptsEarned = score * 15;
         return (
             <div className="text-center py-5">
-                <div className="display-3 mb-3">{score === total ? '🏆' : score >= total / 2 ? '🎉' : '💪'}</div>
+                <div className="display-3 mb-3">{score === total ? <i className="bi bi-trophy-fill" style={{fontSize:'3rem'}} /> : score >= total / 2 ? <i className="bi bi-emoji-laughing" style={{fontSize:'3rem'}} /> : <i className="bi bi-hand-thumbs-up" style={{fontSize:'3rem'}} />}</div>
                 <h3 className="fw-black mb-2">{score}/{total} respuestas correctas</h3>
                 <p className="text-muted mb-2">
                     {score === total ? '¡Puntuación perfecta!' : score >= total / 2 ? '¡Buen trabajo!' : 'Sigue practicando'}
                 </p>
                 {ptsEarned > 0 && (
                     <div className="alert alert-warning d-inline-block px-4 py-2 rounded-pill fw-bold mb-4">
-                        +{ptsEarned} puntos ganados ⭐
+                        +{ptsEarned} puntos ganados <i className="bi bi-star-fill ms-1" />
                     </div>
                 )}
                 <br />
                 <button className="btn btn-primary-custom px-5 py-2" onClick={startTrivia}>
-                    Jugar otra vez 🔄
+                    <i className="bi bi-arrow-repeat me-2" /> Jugar otra vez
                 </button>
             </div>
         );
@@ -404,7 +415,7 @@ function TriviaTab({ studentId, onRefresh }) {
                         Pregunta {current + 1} / {questions.length}
                     </span>
                     <span className="badge bg-warning text-dark rounded-pill px-3 py-2">
-                        ⭐ {score} correctas
+                        <i className="bi bi-star-fill me-1" /> {score} correctas
                     </span>
                 </div>
 

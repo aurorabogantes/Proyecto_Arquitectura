@@ -3,13 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { fetchCourse, fetchStudentProgress, enrollCourse, completeLesson, addPoints } from '../services/api';
 import { useUser } from '../context/UserContext';
 import LessonModal from '../components/LessonModal';
+import Icon from '../components/Icon';
 import { useNotification } from '../context/NotificationContext';
 
 const LESSON_ICONS = {
-    video:       '🎬',
-    interactive: '🖱️',
-    challenge:   '⚔️',
-    project:     '🛠️'
+    video:       <Icon name="video" />,
+    interactive: <Icon name="star" />,
+    challenge:   <Icon name="flame" />,
+    project:     <Icon name="trophy" />
 };
 
 const LEVEL_COLORS = {
@@ -54,7 +55,7 @@ export default function CourseDetailPage() {
                 if (res.alreadyEnrolled) {
                     addNotification({ type: 'info', message: '¡Ya estabas inscrito en este curso!' });
                 } else {
-                    addNotification({ type: 'success', message: `¡Inscripción exitosa! 🎓 Ahora puedes acceder a las lecciones de "${course?.title}"` });
+                    addNotification({ type: 'success', message: `¡Inscripción exitosa! Ahora puedes acceder a las lecciones de "${course?.title}"` });
                 }
             }
         } catch {
@@ -69,7 +70,7 @@ export default function CourseDetailPage() {
             await completeLesson(studentId, lessonId, 100);
             setCompleted(prev => new Set([...prev, lessonId]));
             const res = await addPoints(studentId, 0); // solo para verificar insignias tras la lección
-            addNotification({ type: 'points', message: '¡Lección completada! +10 pts ⭐' });
+            addNotification({ type: 'points', message: '¡Lección completada! +10 pts' });
             (res?.nuevasInsignias || []).forEach(ins => addNotification({
                 type: 'badge',
                 message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
@@ -94,7 +95,7 @@ export default function CourseDetailPage() {
     if (!course) {
         return (
             <div className="container py-5 text-center">
-                <p className="fs-4">Curso no encontrado 😕</p>
+                <p className="fs-4"><i className="bi bi-emoji-frown me-2" /> Curso no encontrado</p>
                 <Link to="/courses" className="btn btn-primary-custom mt-3">← Volver a cursos</Link>
             </div>
         );
@@ -133,7 +134,7 @@ export default function CourseDetailPage() {
                                 </span>
                                 {course.category && (
                                     <span className="badge bg-light text-dark rounded-pill px-3 py-2">
-                                        🏷 {course.category}
+                                        {course.category}
                                     </span>
                                 )}
                             </div>
@@ -142,8 +143,8 @@ export default function CourseDetailPage() {
                             <div className="d-flex flex-wrap gap-3 text-muted small">
                                 <span>👶 {course.ageRange}</span>
                                 <span>⏱ {course.duration}</span>
-                                <span className="text-warning fw-bold">⭐ {course.points} puntos</span>
-                                <span>📖 {course.lessons?.length || 0} lecciones</span>
+                                <span className="text-warning fw-bold"><Icon name="star" /> {course.points} puntos</span>
+                                <span><Icon name="image" /> {course.lessons?.length || 0} lecciones</span>
                             </div>
                         </div>
                     </div>
@@ -164,7 +165,7 @@ export default function CourseDetailPage() {
                                                 onClick={() => handleOpenLesson(lesson)}
                                             >
                                                 <span className="lesson-type-icon">
-                                                    {isDone ? '✅' : (LESSON_ICONS[lesson.type] || '📄')}
+                                                    {isDone ? <i className="bi bi-check-lg" /> : (LESSON_ICONS[lesson.type] || <i className="bi bi-file-earmark-text" />)}
                                                 </span>
                                                 <div className="flex-grow-1">
                                                     <div className={`fw-semibold ${isDone ? 'text-success text-decoration-line-through' : ''}`}>
@@ -181,7 +182,7 @@ export default function CourseDetailPage() {
                                                     enrolled ? 'bg-light text-dark border' :
                                                     'bg-secondary text-white'
                                                 }`}>
-                                                    {isDone ? '✓ Hecho' : enrolled ? 'Abrir →' : '🔒'}
+                                                    {isDone ? <><i className="bi bi-check-lg me-1" /> Hecho</> : enrolled ? 'Abrir →' : <Icon name="lock" />}
                                                 </span>
                                             </div>
                                         );
@@ -197,7 +198,7 @@ export default function CourseDetailPage() {
                     {/* Enroll card */}
                     {!enrolled && (
                         <div className="card border-0 shadow-sm rounded-4 mb-4 p-4 text-center">
-                            <div className="display-4 mb-2">🎯</div>
+                            <div className="display-4 mb-2"><i className="bi bi-bullseye" style={{fontSize:'3rem'}} /></div>
                             <h5 className="fw-bold mb-1">¿Listo para aprender?</h5>
                             <p className="text-muted small mb-3">
                                 Inscríbete y gana <strong>{course.points} puntos</strong> al completarlo
@@ -225,7 +226,7 @@ export default function CourseDetailPage() {
                                         className={`btn btn-sm rounded-pill ${activeMedia?.id === m.id ? 'btn-secondary-custom' : 'btn-outline-secondary'}`}
                                         onClick={() => setMedia(m)}
                                     >
-                                        {m.type === 'video' ? '🎬' : '🖼️'} {m.title}
+                                        {m.type === 'video' ? <i className="bi bi-play-circle me-1" /> : <i className="bi bi-image me-1" />} {m.title}
                                     </button>
                                 ))}
                             </div>

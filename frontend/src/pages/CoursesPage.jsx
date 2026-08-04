@@ -2,18 +2,19 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchCourses, fetchStudentProgress } from '../services/api';
 import { useUser } from '../context/UserContext';
+import Icon from '../components/Icon';
 
 const LEVEL_COLORS = {
-    Principiante: { bg: '#d4edda', text: '#155724', icon: '🌱' },
-    Intermedio:   { bg: '#fff3cd', text: '#856404', icon: '⚡' },
-    Avanzado:     { bg: '#f8d7da', text: '#721c24', icon: '🔥' }
+    Principiante: { bg: '#d4edda', text: '#155724', icon: <Icon name="star" /> },
+    Intermedio:   { bg: '#fff3cd', text: '#856404', icon: <Icon name="star" /> },
+    Avanzado:     { bg: '#f8d7da', text: '#721c24', icon: <Icon name="flame" /> }
 };
 
 const TABS = [
-    { id: 'todos',       label: '📚 Todos' },
-    { id: 'mis-cursos',  label: '🎓 Mis cursos' },
-    { id: 'en-progreso', label: '⏳ En progreso' },
-    { id: 'completados', label: '✅ Completados' }
+    { id: 'todos',       label: <> <Icon name="image" /> Todos</> },
+    { id: 'mis-cursos',  label: <> <Icon name="trophy" /> Mis cursos</> },
+    { id: 'en-progreso', label: <> <Icon name="flame" /> En progreso</> },
+    { id: 'completados', label: <> <Icon name="trophy" /> Completados</> }
 ];
 
 export default function CoursesPage() {
@@ -66,7 +67,7 @@ export default function CoursesPage() {
         <>
             <div className="hero-banner">
                 <div className="container text-center">
-                    <h1 className="display-5 fw-black mb-2">🎓 Aprende a Programar</h1>
+                    <h1 className="display-5 fw-black mb-2"><i className="bi bi-mortarboard-fill me-2" /> Aprende a Programar</h1>
                     <p className="lead mb-0 opacity-90">
                         Explora cursos de programación divertidos diseñados para niños
                     </p>
@@ -97,7 +98,7 @@ export default function CoursesPage() {
                         <input
                             type="text"
                             className="form-control rounded-pill"
-                            placeholder="🔍 Buscar cursos..."
+                            placeholder="Buscar cursos..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
@@ -129,8 +130,8 @@ export default function CoursesPage() {
                 ) : filtered.length === 0 ? (
                     <div className="empty-state">
                         <div className="icon">
-                            {activeTab === 'mis-cursos' ? '📋' : activeTab === 'completados' ? '🏆' : '🔭'}
-                        </div>
+                                {activeTab === 'mis-cursos' ? <Icon name="star" /> : activeTab === 'completados' ? <Icon name="trophy" /> : <Icon name="star" />}
+                            </div>
                         <p className="fs-5 fw-semibold">
                             {activeTab === 'mis-cursos'  ? 'Aún no estás inscrito en ningún curso' :
                              activeTab === 'en-progreso' ? 'No tienes cursos en progreso' :
@@ -169,20 +170,20 @@ function CourseCard({ course, progress }) {
                         className="card-img-top" style={{ height: 180, objectFit: 'cover' }} />
                 ) : (
                     <div className="d-flex align-items-center justify-content-center"
-                        style={{ height: 180, background: '#f0f4ff', fontSize: '3rem' }}>📚</div>
+                        style={{ height: 180, background: '#f0f4ff', fontSize: '3rem' }}><Icon name="image" /></div>
                 )}
 
                 {/* Badge de estado sobre imagen */}
                 {completed && (
-                    <span className="position-absolute top-0 end-0 m-2 badge fw-bold px-3 py-2"
-                        style={{ background: '#28a745', color: '#fff', borderRadius: 99 }}>
-                        ✅ Completado
-                    </span>
+                        <span className="position-absolute top-0 end-0 m-2 badge fw-bold px-3 py-2"
+                            style={{ background: '#28a745', color: '#fff', borderRadius: 99 }}>
+                            <i className="bi bi-check-lg me-1" /> Completado
+                        </span>
                 )}
                 {enrolled && !completed && (
                     <span className="position-absolute top-0 end-0 m-2 badge fw-bold px-3 py-2"
                         style={{ background: '#FF6B6B', color: '#fff', borderRadius: 99 }}>
-                        📖 Inscrito
+                        <i className="bi bi-book me-1" /> Inscrito
                     </span>
                 )}
 
@@ -192,7 +193,7 @@ function CourseCard({ course, progress }) {
                             style={{ background: lvl.bg, color: lvl.text }}>
                             {lvl.icon} {course.level}
                         </span>
-                        <span className="text-warning fw-bold">⭐ {course.points} pts</span>
+                        <span className="text-warning fw-bold"><Icon name="star" /> {course.points} pts</span>
                     </div>
 
                     <h5 className="fw-bold mb-1">{course.title}</h5>
@@ -217,12 +218,12 @@ function CourseCard({ course, progress }) {
                     )}
 
                     <div className="d-flex justify-content-between text-muted small mb-3">
-                        <span>👶 {course.ageRange}</span>
-                        <span>⏱ {course.duration}</span>
+                        <span><i className="bi bi-person me-1" /> {course.ageRange}</span>
+                        <span><i className="bi bi-clock me-1" /> {course.duration}</span>
                     </div>
 
                     <Link to={`/courses/${course.id}`} className="btn btn-primary-custom w-100">
-                        {completed ? 'Ver detalles 🏆' : enrolled ? 'Continuar →' : 'Ver curso →'}
+                        {completed ? 'Ver detalles' : enrolled ? 'Continuar →' : 'Ver curso →'}
                     </Link>
                 </div>
             </div>

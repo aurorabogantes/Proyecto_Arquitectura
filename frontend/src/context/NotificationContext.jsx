@@ -31,11 +31,11 @@ export const useNotification = () => useContext(NotificationContext);
 
 /* ── Floating container ──────────────────────────────────── */
 const TYPE_STYLES = {
-    success: { bg: 'linear-gradient(135deg,#28a745,#4ECDC4)', icon: '✅' },
-    badge:   { bg: 'linear-gradient(135deg,#9B59B6,#FFD93D)', icon: '🏅' },
-    points:  { bg: 'linear-gradient(135deg,#FF6B6B,#FF8E53)', icon: '⭐' },
-    info:    { bg: 'linear-gradient(135deg,#45B7D1,#4ECDC4)', icon: 'ℹ️' },
-    warning: { bg: 'linear-gradient(135deg,#FFD93D,#FF8E53)', icon: '⚠️' }
+    success: { bg: 'linear-gradient(135deg,#28a745,#4ECDC4)', icon: <i className="bi bi-check-circle-fill" /> },
+    badge:   { bg: 'linear-gradient(135deg,#9B59B6,#FFD93D)', icon: <i className="bi bi-trophy-fill" /> },
+    points:  { bg: 'linear-gradient(135deg,#FF6B6B,#FF8E53)', icon: <i className="bi bi-star-fill" /> },
+    info:    { bg: 'linear-gradient(135deg,#45B7D1,#4ECDC4)', icon: <i className="bi bi-info-circle-fill" /> },
+    warning: { bg: 'linear-gradient(135deg,#FFD93D,#FF8E53)', icon: <i className="bi bi-exclamation-triangle-fill" /> }
 };
 
 function NotificationContainer({ notifications, onRemove }) {
