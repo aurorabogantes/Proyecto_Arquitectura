@@ -220,7 +220,6 @@ class GamificationService {
         }
     }
 
-    // Integración con Open Trivia Database (https://opentdb.com) – categoría 18: Computers
     getTriviaQuestions() {
         return new Promise((resolve) => {
             const url = 'https://opentdb.com/api.php?amount=5&category=18&difficulty=easy&type=multiple';
@@ -231,13 +230,12 @@ class GamificationService {
                     try {
                         const parsed = JSON.parse(data);
                         if (parsed.response_code === 0) {
-                            const questions = parsed.results.map(q => ({
-                                question: q.question,
-                                correctAnswer: q.correct_answer,
-                                options: [...q.incorrect_answers, q.correct_answer]
+                            resolve(parsed.results.map(question => ({
+                                question: question.question,
+                                correctAnswer: question.correct_answer,
+                                options: [...question.incorrect_answers, question.correct_answer]
                                     .sort(() => Math.random() - 0.5)
-                            }));
-                            resolve(questions);
+                            })));
                         } else {
                             resolve([]);
                         }
