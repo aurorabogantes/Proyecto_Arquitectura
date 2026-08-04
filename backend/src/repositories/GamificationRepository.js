@@ -92,7 +92,9 @@ async function actualizarProgresoDesafio(estudianteId, desafioId, progreso) {
         const existe = await pool.request()
             .input("estudianteId", sql.Int, estudianteId)
             .input("desafioId",   sql.Int, desafioId)
-            .query(`SELECT Id FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
+            .query(`SELECT Id, Completado FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
+
+        const yaCompletado = existe.recordset[0]?.Completado === true;
 
         if (existe.recordset.length > 0) {
             await pool.request()
@@ -112,10 +114,20 @@ async function actualizarProgresoDesafio(estudianteId, desafioId, progreso) {
                 .input("progreso",    sql.Int, progreso)
                 .query(`
                     INSERT INTO ProgresoDesafio (EstudianteId, DesafioId, Progreso, Completado)
-                    VALUES (@estudianteId, @desafioId, @progreso, 0)
+                    VALUES (
+                        @estudianteId,
+                        @desafioId,
+                        @progreso,
+                        CASE WHEN @progreso >= (SELECT Objetivo FROM Desafios WHERE DesafioId = @desafioId) THEN 1 ELSE 0 END
+                    )
                 `);
         }
-        return true;
+        const estado = await pool.request()
+            .input("estudianteId", sql.Int, estudianteId)
+            .input("desafioId",   sql.Int, desafioId)
+            .query(`SELECT Progreso, Completado FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
+        const actual = estado.recordset[0] || { Progreso: 0, Completado: false };
+        return { ...actual, completadoAhora: !yaCompletado && !!actual.Completado };
     } catch (error) {
         console.log(error);
         throw error;
@@ -171,6 +183,24 @@ async function obtenerCursosInscritosCount(estudianteId) {
     }
 }
 
+async function obtenerCursosInscritosHoyCount(estudianteId) {
+    try {
+        const pool = await sql.connect(config);
+        const resultado = await pool.request()
+            .input("estudianteId", sql.Int, estudianteId)
+            .query(`
+                SELECT COUNT(*) AS Total
+                FROM EstudianteCurso
+                WHERE EstudianteId = @estudianteId
+                  AND FechaMatricula = CAST(GETDATE() AS DATE)
+            `);
+        return resultado.recordset[0].Total;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
 // Lecciones completadas en los últimos 7 días (para reto semanal)
 async function obtenerLeccionesSemanalesCount(estudianteId) {
     try {
@@ -190,6 +220,78 @@ async function obtenerLeccionesSemanalesCount(estudianteId) {
     }
 }
 
+async function obtenerCursosScratchCompletadosSemanaCount(estudianteId) {
+    try {
+        const pool = await sql.connect(config);
+        const resultado = await pool.request()
+            .input("estudianteId", sql.Int, estudianteId)
+            .query(`
+                SELECT COUNT(*) AS Total
+                FROM EstudianteCurso ec
+                INNER JOIN Cursos c ON c.CursoId = ec.CursoId
+                WHERE ec.EstudianteId = @estudianteId
+                  AND ec.Completado = 1
+                  AND c.Titulo LIKE '%Scratch%'
+                  AND EXISTS (
+                      SELECT 1
+                      FROM ProgresoLeccion pl
+                      INNER JOIN Lecciones l ON l.LeccionId = pl.LeccionId
+                      WHERE pl.EstudianteId = @estudianteId
+                        AND l.CursoId = ec.CursoId
+                        AND pl.Completado = 1
+                        AND pl.FechaCompletado >= DATEADD(DAY, -7, GETDATE())
+                  )
+            `);
+        return resultado.recordset[0].Total;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
+async function obtenerEstadisticasInsignias(estudianteId) {
+    try {
+        const pool = await sql.connect(config);
+        const resultado = await pool.request()
+            .input("estudianteId", sql.Int, estudianteId)
+            .query(`
+                SELECT
+                    (SELECT COUNT(*) FROM EstudianteCurso WHERE EstudianteId = @estudianteId) AS CursosInscritos,
+                    (SELECT COUNT(*) FROM EstudianteCurso WHERE EstudianteId = @estudianteId AND Completado = 1) AS CursosCompletados,
+                    (SELECT COUNT(*) FROM Cursos) AS TotalCursos,
+                    (
+                        SELECT COUNT(*)
+                        FROM ProgresoLeccion pl
+                        INNER JOIN Lecciones l ON l.LeccionId = pl.LeccionId
+                        WHERE pl.EstudianteId = @estudianteId
+                          AND pl.Completado = 1
+                          AND l.Tipo = 'project'
+                    ) AS ProyectosCompletados
+            `);
+        return resultado.recordset[0];
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
+async function obtenerCursosCompletados(estudianteId) {
+    try {
+        const pool = await sql.connect(config);
+        const resultado = await pool.request()
+            .input("estudianteId", sql.Int, estudianteId)
+            .query(`
+                SELECT CursoId
+                FROM EstudianteCurso
+                WHERE EstudianteId = @estudianteId AND Completado = 1
+            `);
+        return resultado.recordset.map(r => r.CursoId);
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+}
+
 // Incrementa el progreso de un desafío en +delta (sin sobrepasar Objetivo)
 async function incrementarProgresoDesafio(estudianteId, desafioId, delta) {
     try {
@@ -197,7 +299,9 @@ async function incrementarProgresoDesafio(estudianteId, desafioId, delta) {
         const existe = await pool.request()
             .input("estudianteId", sql.Int, estudianteId)
             .input("desafioId",   sql.Int, desafioId)
-            .query(`SELECT Id, Progreso FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
+            .query(`SELECT Id, Progreso, Completado FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
+
+        const yaCompletado = existe.recordset[0]?.Completado === true;
 
         if (existe.recordset.length > 0) {
             await pool.request()
@@ -229,7 +333,7 @@ async function incrementarProgresoDesafio(estudianteId, desafioId, delta) {
             .input("estudianteId", sql.Int, estudianteId)
             .input("desafioId",   sql.Int, desafioId)
             .query(`SELECT Progreso, Completado FROM ProgresoDesafio WHERE EstudianteId = @estudianteId AND DesafioId = @desafioId`);
-        return actual.recordset[0] || { Progreso: 0, Completado: 0 };
+        return { ...(actual.recordset[0] || { Progreso: 0, Completado: 0 }), YaCompletado: yaCompletado };
     } catch (error) {
         console.log(error);
         throw error;
@@ -248,5 +352,9 @@ module.exports = {
     agregarPuntos,
     otorgarInsignia,
     obtenerCursosInscritosCount,
-    obtenerLeccionesSemanalesCount
+    obtenerCursosInscritosHoyCount,
+    obtenerLeccionesSemanalesCount,
+    obtenerCursosScratchCompletadosSemanaCount,
+    obtenerEstadisticasInsignias,
+    obtenerCursosCompletados
 };

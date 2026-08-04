@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchCourse, enrollCourse, completeLesson, addPoints } from '../services/api';
+import { fetchCourse, fetchStudentProgress, enrollCourse, completeLesson, addPoints } from '../services/api';
 import { useUser } from '../context/UserContext';
 import LessonModal from '../components/LessonModal';
 import { useNotification } from '../context/NotificationContext';
@@ -32,14 +32,18 @@ export default function CourseDetailPage() {
     const { addNotification }           = useNotification();
 
     useEffect(() => {
-        fetchCourse(id)
-            .then(data => {
+        setLoading(true);
+        Promise.all([fetchCourse(id), fetchStudentProgress(studentId)])
+            .then(([data, progress]) => {
                 setCourse(data);
+                setEnrolled((Array.isArray(progress) ? progress : []).some(
+                    item => String(item.cursoId) === String(id)
+                ));
                 if (data?.mediaItems?.length > 0) setMedia(data.mediaItems[0]);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
-    }, [id]);
+    }, [id, studentId]);
 
     const handleEnroll = async () => {
         setEnrolling(true);
@@ -191,24 +195,22 @@ export default function CourseDetailPage() {
                 {/* Right: enroll + media */}
                 <div className="col-lg-4">
                     {/* Enroll card */}
-                    <div className="card border-0 shadow-sm rounded-4 mb-4 p-4 text-center">
-                        <div className="display-4 mb-2">🎯</div>
-                        <h5 className="fw-bold mb-1">¿Listo para aprender?</h5>
-                        <p className="text-muted small mb-3">
-                            Inscríbete y gana <strong>{course.points} puntos</strong> al completarlo
-                        </p>
-                        <button
-                            className={`btn w-100 ${enrolled ? 'btn-success' : 'btn-primary-custom'}`}
-                            onClick={handleEnroll}
-                            disabled={enrolling}
-                        >
-                            {enrolling
-                                ? 'Inscribiendo...'
-                                : enrolled
-                                    ? '✓ Inscrito'
-                                    : '¡Inscribirme ahora!'}
-                        </button>
-                    </div>
+                    {!enrolled && (
+                        <div className="card border-0 shadow-sm rounded-4 mb-4 p-4 text-center">
+                            <div className="display-4 mb-2">🎯</div>
+                            <h5 className="fw-bold mb-1">¿Listo para aprender?</h5>
+                            <p className="text-muted small mb-3">
+                                Inscríbete y gana <strong>{course.points} puntos</strong> al completarlo
+                            </p>
+                            <button
+                                className="btn w-100 btn-primary-custom"
+                                onClick={handleEnroll}
+                                disabled={enrolling}
+                            >
+                                {enrolling ? 'Inscribiendo...' : '¡Inscribirme ahora!'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Media player */}
                     {course.mediaItems?.length > 0 && (

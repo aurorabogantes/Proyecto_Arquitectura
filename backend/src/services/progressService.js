@@ -45,12 +45,8 @@ class ProgressService {
             throw new Error("estudianteId y leccionId son requeridos");
         }
         await repository.marcarLeccionCompletada(estudianteId, leccionId, puntuacion);
-        // Añadir puntos base + evaluar desafíos (no bloquea la respuesta)
-        Promise.all([
-            gamificationService.addPoints(estudianteId, PUNTOS_POR_LECCION),
-            gamificationService.evaluarDesafiosTrasLeccion(estudianteId)
-        ]).catch(() => {});
-        return true;
+        await gamificationService.evaluarDesafiosTrasLeccion(estudianteId);
+        return await gamificationService.addPoints(estudianteId, PUNTOS_POR_LECCION);
     }
 
     async getActivityHistory(estudianteId) {

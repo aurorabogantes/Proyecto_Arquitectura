@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchDashboard, fetchTrivia, updateProgress, addPoints, triviaResultado } from '../services/api';
+import { fetchDashboard, fetchTrivia, triviaResultado } from '../services/api';
 import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -95,11 +95,7 @@ export default function GamificationPage() {
                 {activeTab === 'overview'   && <OverviewTab user={user} badges={badges} challenges={challenges} />}
                 {activeTab === 'badges'     && <BadgesTab badges={badges} />}
                 {activeTab === 'challenges' && (
-                    <ChallengesTab
-                        challenges={challenges}
-                        studentId={studentId}
-                        onRefresh={loadDashboard}
-                    />
+                    <ChallengesTab challenges={challenges} />
                 )}
                 {activeTab === 'trivia'     && (
                     <TriviaTab studentId={studentId} onRefresh={loadDashboard} />
@@ -232,48 +228,7 @@ function BadgeChip({ badge, showLocked = false }) {
     );
 }
 
-function ChallengesTab({ challenges: initialChallenges, studentId, onRefresh }) {
-    const [challenges, setChallenges] = useState(initialChallenges);
-    const [updating, setUpdating]     = useState(null);
-    const { addNotification }         = useNotification();
-
-    useEffect(() => { setChallenges(initialChallenges); }, [initialChallenges]);
-
-    const handleProgress = async (challenge) => {
-        if (challenge.isCompleted || updating) return;
-        setUpdating(challenge.id);
-
-        const newProg = Math.min((challenge.userProgress || 0) + 1, challenge.target);
-        const nowDone = newProg >= challenge.target;
-
-        setChallenges(prev => prev.map(c => c.id === challenge.id ? {
-            ...c,
-            userProgress: newProg,
-            progressPct: Math.min(Math.round((newProg / c.target) * 100), 100),
-            isCompleted: nowDone
-        } : c));
-
-        try {
-            await updateProgress(studentId, challenge.id, newProg);
-            if (nowDone) {
-                const res = await addPoints(studentId, challenge.reward);
-                addNotification({
-                    type: 'success',
-                    message: `¡Reto completado! ${challenge.icon} "${challenge.title}" +${challenge.reward} pts`
-                });
-                (res?.nuevasInsignias || []).forEach(ins => addNotification({
-                    type: 'badge',
-                    message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
-                }));
-            }
-            onRefresh();
-        } catch {
-            setChallenges(initialChallenges);
-        } finally {
-            setUpdating(null);
-        }
-    };
-
+function ChallengesTab({ challenges }) {
     return (
         <div>
 
@@ -316,15 +271,7 @@ function ChallengesTab({ challenges: initialChallenges, studentId, onRefresh }) 
                                 {c.isCompleted ? (
                                     <span className="badge bg-success rounded-pill px-3 py-2">✓ Completado</span>
                                 ) : (
-                                    <button
-                                        className="btn btn-sm btn-secondary-custom rounded-pill px-3"
-                                        onClick={() => handleProgress(c)}
-                                        disabled={!!updating}
-                                    >
-                                        {updating === c.id ? (
-                                            <span className="spinner-border spinner-border-sm" />
-                                        ) : '+ Avanzar'}
-                                    </button>
+                                    <span className="badge bg-light text-dark border rounded-pill px-3 py-2">En progreso</span>
                                 )}
                             </div>
                         </div>

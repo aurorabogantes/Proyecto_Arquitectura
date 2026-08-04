@@ -10,7 +10,7 @@ class Badge {
     }
 
     isEarned(user) {
-        return user.earnedBadges.includes(this.id);
+        return user.earnedBadges.some(id => String(id) === String(this.id));
     }
 }
 

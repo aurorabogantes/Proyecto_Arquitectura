@@ -49,9 +49,9 @@ class CourseService {
 
     async enrollStudent(estudianteId, cursoId) {
         const resultado = await repository.inscribirEstudiante(estudianteId, cursoId);
-        // Evalúa desafíos de inscripción automáticamente (no bloquea la respuesta)
-        gamificationService.evaluarDesafiosTrasInscripcion(estudianteId).catch(() => {});
-        return resultado;
+        await gamificationService.evaluarDesafiosTrasInscripcion(estudianteId);
+        const nuevasInsignias = await gamificationService.verificarInsignias(estudianteId);
+        return { ...resultado, nuevasInsignias };
     }
 }
 

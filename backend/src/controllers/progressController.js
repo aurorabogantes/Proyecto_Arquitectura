@@ -37,8 +37,8 @@ const progressController = {
     async completeLesson(req, res) {
         try {
             const { estudianteId, leccionId, puntuacion } = req.body;
-            await progressService.completeLesson(estudianteId, leccionId, puntuacion);
-            res.json({ success: true });
+            const resultado = await progressService.completeLesson(estudianteId, leccionId, puntuacion);
+            res.json({ success: true, ...resultado });
         } catch (error) {
             res.status(400).json({ error: error.message });
         }

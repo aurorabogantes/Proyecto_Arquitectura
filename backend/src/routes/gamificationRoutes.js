@@ -5,7 +5,6 @@ const controller = require('../controllers/gamificationController');
 router.get('/dashboard', controller.dashboard);
 router.get('/trivia', controller.trivia);
 router.post('/trivia-resultado', controller.triviaResultado);
-router.post('/progress', controller.updateProgress);
 router.post('/points', controller.addPoints);
 
 module.exports = router;

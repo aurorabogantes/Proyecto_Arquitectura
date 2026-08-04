@@ -7,6 +7,11 @@ const https = require('https');
 class GamificationService {
 
     async getDashboard(estudianteId) {
+        await Promise.all([
+            this.evaluarDesafiosTrasInscripcion(estudianteId),
+            this.evaluarDesafiosTrasLeccion(estudianteId)
+        ]);
+        await this.verificarInsignias(estudianteId);
         const [datosEstudiante, insignias, niveles, desafios, insigniasGanadas, progresoDesafios] = await Promise.all([
             repository.obtenerDatosEstudiante(estudianteId),
             repository.obtenerInsignias(),
@@ -98,17 +103,22 @@ class GamificationService {
     // Comprueba qué insignias por puntos aún no tiene el estudiante y las otorga
     async verificarInsignias(estudianteId) {
         try {
-            const [insignias, ganadas, datos] = await Promise.all([
+            const [insignias, ganadas, datos, estadisticas, cursosCompletados] = await Promise.all([
                 repository.obtenerInsignias(),
                 repository.obtenerInsigniasEstudiante(estudianteId),
-                repository.obtenerDatosEstudiante(estudianteId)
+                repository.obtenerDatosEstudiante(estudianteId),
+                repository.obtenerEstadisticasInsignias(estudianteId),
+                repository.obtenerCursosCompletados(estudianteId)
             ]);
             if (!datos) return [];
             const nuevas = [];
             for (const ins of insignias) {
                 if (ganadas.includes(ins.InsigniaId)) continue;
                 const porPuntos = !ins.Especial && ins.PuntosRequeridos > 0 && datos.Puntos >= ins.PuntosRequeridos;
-                if (porPuntos) {
+                const porCondicionEspecial = this.cumpleCondicionEspecial(
+                    ins.Especial, datos, estadisticas, cursosCompletados
+                );
+                if (porPuntos || porCondicionEspecial) {
                     const otorgada = await repository.otorgarInsignia(estudianteId, ins.InsigniaId);
                     if (otorgada) nuevas.push({ id: ins.InsigniaId, nombre: ins.Nombre, icono: ins.Icono, color: ins.Color });
                 }
@@ -120,6 +130,21 @@ class GamificationService {
         }
     }
 
+    cumpleCondicionEspecial(especial, datos, estadisticas, cursosCompletados) {
+        if (!especial) return false;
+        if (especial === 'courses_3') return estadisticas.CursosInscritos >= 3;
+        if (especial === 'all_courses') {
+            return estadisticas.TotalCursos > 0 && estadisticas.CursosCompletados >= estadisticas.TotalCursos;
+        }
+        if (especial === 'project') return estadisticas.ProyectosCompletados > 0;
+
+        const curso = especial.match(/^course_(\d+)$/);
+        if (curso) return cursosCompletados.includes(Number(curso[1]));
+
+        const racha = especial.match(/^streak_(\d+)$/);
+        return !!racha && datos.Racha >= Number(racha[1]);
+    }
+
     // ── Auto-evaluación de desafíos ──────────────────────────────────────
 
     // Llamar después de que un estudiante se inscribe en un curso.
@@ -129,7 +154,7 @@ class GamificationService {
         try {
             const [desafios, total] = await Promise.all([
                 repository.obtenerDesafios(),
-                repository.obtenerCursosInscritosCount(estudianteId)
+                repository.obtenerCursosInscritosHoyCount(estudianteId)
             ]);
             const relevantes = desafios.filter(d =>
                 d.Descripcion?.toLowerCase().includes('inscri') ||
@@ -137,8 +162,8 @@ class GamificationService {
             );
             for (const d of relevantes) {
                 const progreso = Math.min(Number(total), d.Objetivo);
-                await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
-                if (progreso >= d.Objetivo) {
+                const estado = await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
+                if (estado.completadoAhora) {
                     await repository.agregarPuntos(estudianteId, d.Recompensa);
                 }
             }
@@ -152,17 +177,19 @@ class GamificationService {
     // y actualiza con el conteo de lecciones completadas esta semana.
     async evaluarDesafiosTrasLeccion(estudianteId) {
         try {
-            const [desafios, total] = await Promise.all([
+            const [desafios, leccionesSemanales, cursosScratch] = await Promise.all([
                 repository.obtenerDesafios(),
-                repository.obtenerLeccionesSemanalesCount(estudianteId)
+                repository.obtenerLeccionesSemanalesCount(estudianteId),
+                repository.obtenerCursosScratchCompletadosSemanaCount(estudianteId)
             ]);
-            const relevantes = desafios.filter(d =>
-                d.Descripcion?.toLowerCase().includes('lecci')
-            );
-            for (const d of relevantes) {
+            for (const d of desafios) {
+                const descripcion = `${d.Titulo || ''} ${d.Descripcion || ''}`.toLowerCase();
+                const total = descripcion.includes('scratch') ? cursosScratch :
+                    descripcion.includes('lecci') ? leccionesSemanales : null;
+                if (total === null) continue;
                 const progreso = Math.min(Number(total), d.Objetivo);
-                await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
-                if (progreso >= d.Objetivo) {
+                const estado = await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
+                if (estado.completadoAhora) {
                     await repository.agregarPuntos(estudianteId, d.Recompensa);
                 }
             }
@@ -184,7 +211,7 @@ class GamificationService {
                 const estado = await repository.incrementarProgresoDesafio(
                     estudianteId, d.DesafioId, aciertos
                 );
-                if (estado.Completado) {
+                if (estado.Completado && !estado.YaCompletado) {
                     await repository.agregarPuntos(estudianteId, d.Recompensa);
                 }
             }
