@@ -6,8 +6,9 @@
       lecciones, recursos multimedia, gamificación)
    2) Script complementario de José Esquivel (seguimiento del
       progreso por estudiante y reportes para docentes/padres)
+   3) Datos iniciales de gamificación (Niveles, Insignias,
+      Desafíos) y estudiantados de ejemplo
    ============================================================ */
-
 
 /* ============================================================
    PARTE 1 — Script original de Kevin González
@@ -47,15 +48,16 @@ CREATE TABLE Lecciones(
         REFERENCES Cursos(CursoId)
 );
 
-CREATE TABLE RecursosMultimedia(
-    RecursoId INT IDENTITY PRIMARY KEY,
-    CursoId INT,
+CREATE TABLE MediaItems(
+    MediaId INT IDENTITY(1,1) PRIMARY KEY,
+    CursoId INT NOT NULL,
     Tipo VARCHAR(20),
     Url VARCHAR(300),
     Titulo VARCHAR(100),
 
-    FOREIGN KEY(CursoId)
-    REFERENCES Cursos(CursoId)
+    CONSTRAINT FK_MediaItems_Cursos
+        FOREIGN KEY(CursoId)
+        REFERENCES Cursos(CursoId)
 );
 
 CREATE TABLE Estudiantes(
@@ -193,8 +195,8 @@ CREATE TABLE Niveles(
 CREATE INDEX IX_Lecciones_CursoId
 ON Lecciones(CursoId);
 
-CREATE INDEX IX_Recursos_CursoId
-ON RecursosMultimedia(CursoId);
+CREATE INDEX IX_MediaItems_CursoId
+ON MediaItems(CursoId);
 
 CREATE INDEX IX_EstudianteCurso_Estudiante
 ON EstudianteCurso(EstudianteId);
@@ -289,7 +291,6 @@ VALUES
 'https://placehold.co/400x250/DDA0DD/ffffff?text=Logica'
 );
 
-
 /* Insertar lecciones dentro de los cursos */
 
 INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
@@ -298,35 +299,26 @@ INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 (1,'Movimiento básico','12 min','video'),
 (1,'Reto: Crea tu animación','20 min','challenge');
 
-
 INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 (2,'¿Qué es Python?','8 min','video'),
 (2,'Variables y tipos','20 min','interactive'),
 (2,'Condicionales','18 min','video'),
 (2,'Bucles','22 min','interactive');
 
-
-
 INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 (3,'Estructura HTML','12 min','video'),
 (3,'Estilos con CSS','15 min','interactive'),
 (3,'Colores y fuentes','10 min','video');
-
-
 
 INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 (4,'Comandos básicos','10 min','video'),
 (4,'Automatización con bloques','15 min','interactive'),
 (4,'Proyecto: Construcción automática','25 min','project');
 
-
-
 INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 (5,'Componentes electrónicos','20 min','video'),
 (5,'Circuitos simples','25 min','interactive'),
 (5,'Tu primer robot','30 min','project');
-
-
 
 INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 (6,'¿Qué es un algoritmo?','8 min','video'),
@@ -335,7 +327,7 @@ INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 
 /* Insertar contenido multimedia dentro de los cursos */
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (1,'video','https://www.youtube.com/embed/jXUZaf5D12A','Introducción a Scratch'),
@@ -344,9 +336,7 @@ VALUES
 'https://placehold.co/600x400/FF6B6B/ffffff?text=Interfaz+Scratch',
 'Interfaz de Scratch');
 
-
-
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (2,'video','https://www.youtube.com/embed/Bz2HKfOmRi8','Python básico para niños'),
@@ -355,18 +345,14 @@ VALUES
 'https://placehold.co/600x400/4ECDC4/ffffff?text=Codigo+Python',
 'Código Python');
 
-
-
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (3,'video',
 'https://www.youtube.com/embed/salY_Sm6mv4',
 'HTML para principiantes');
 
-
-
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (4,'video',
@@ -377,8 +363,7 @@ VALUES
 'https://placehold.co/600x400/96CEB4/333333?text=Minecraft+Bloques',
 'Bloques de programación');
 
-
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (5,'video',
@@ -389,9 +374,7 @@ VALUES
 'https://placehold.co/600x400/FFEAA7/333333?text=Robot',
 'Componentes del robot');
 
-
-
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (6,'video',
@@ -408,8 +391,7 @@ SELECT * FROM Cursos;
 
 SELECT * FROM Lecciones;
 
-SELECT * FROM RecursosMultimedia;
-
+SELECT * FROM MediaItems;
 
 /* ============================================================
    PARTE 2 — Script complementario de Jose Esquivel
@@ -497,3 +479,42 @@ GO
 SELECT * FROM ProgresoLeccion;
 
 SELECT * FROM SesionUso;
+
+/* ============================================================
+   PARTE 3 — Datos iniciales de gamificación
+   (Niveles, Insignias, Desafíos)
+   ============================================================ */
+
+INSERT INTO Niveles (Nombre, MinPuntos, MaxPuntos, Icono, Color)
+VALUES
+    ('Explorador',  0,    199,  '🌱', '#6BCB77'),
+    ('Aprendiz',    200,  499,  '⚡', '#FFD93D'),
+    ('Ninja',       500,  999,  '🥷', '#FF6B6B'),
+    ('Maestro',     1000, 99999,'🚀', '#4ECDC4');
+GO
+
+INSERT INTO Insignias (Nombre, Descripcion, Icono, PuntosRequeridos, Color, Especial)
+VALUES
+    ('Primera Estrella', 'Completaste tu primer curso',     '⭐', 100,  '#FFD700', NULL),
+    ('Explorador',       'Inscrito en 3 cursos',           '🧭', 0,    '#4ECDC4', 'courses_3'),
+    ('Código Ninja',     'Acumula 500 puntos',             '🥷', 500,  '#FF6B6B', NULL),
+    ('Super Aprendiz',   'Acumula 1000 puntos',            '🚀', 1000, '#45B7D1', NULL),
+    ('Maestro Web',      'Completa el curso de HTML y CSS','🌐', 0,    '#96CEB4', 'course_3'),
+    ('Programador Pro',  'Completa todos los cursos',      '💻', 0,    '#9B59B6', 'all_courses'),
+    ('Racha de Fuego',   'Aprende 7 días seguidos',        '🔥', 0,    '#E74C3C', 'streak_7'),
+    ('Creador',          'Completa un proyecto',           '🎨', 0,    '#F39C12', 'project');
+GO
+
+INSERT INTO Desafios (Titulo, Descripcion, Icono, Recompensa, Tipo, Objetivo, Expira)
+VALUES
+    ('¡Desafío Relámpago!',   'Inscríbete en 2 cursos hoy',               '⚡', 50,  'daily',  2, '24 horas'),
+    ('Semana de Scratch',      'Completa el curso de Scratch esta semana', '🎮', 200, 'weekly', 1, '5 días'),
+    ('Maratón de Aprendizaje', 'Completa 5 lecciones esta semana',         '📚', 100, 'weekly', 5, '5 días'),
+    ('Quiz Master',            'Responde 3 trivias correctamente',         '🧠', 75,  'daily',  3, '24 horas');
+GO
+
+/* Verificar datos de gamificación */
+
+SELECT * FROM Niveles;
+SELECT * FROM Insignias;
+SELECT * FROM Desafios;

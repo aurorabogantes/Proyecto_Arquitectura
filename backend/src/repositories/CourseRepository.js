@@ -40,9 +40,9 @@ async function obtenerCurso(cursoId) {
         const mediaRes = await pool.request()
             .input("cursoId", sql.Int, cursoId)
             .query(`
-                SELECT RecursoId AS MediaId, Tipo, Url, Titulo
-                FROM RecursosMultimedia WHERE CursoId = @cursoId
-                ORDER BY RecursoId
+                SELECT MediaId, Tipo, Url, Titulo
+                FROM MediaItems WHERE CursoId = @cursoId
+                ORDER BY MediaId
             `);
 
         return {

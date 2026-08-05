@@ -48,15 +48,16 @@ CREATE TABLE Lecciones(
         REFERENCES Cursos(CursoId)
 );
 
-CREATE TABLE RecursosMultimedia(
-    RecursoId INT IDENTITY PRIMARY KEY,
-    CursoId INT,
+CREATE TABLE MediaItems(
+    MediaId INT IDENTITY(1,1) PRIMARY KEY,
+    CursoId INT NOT NULL,
     Tipo VARCHAR(20),
     Url VARCHAR(300),
     Titulo VARCHAR(100),
 
-    FOREIGN KEY(CursoId)
-    REFERENCES Cursos(CursoId)
+    CONSTRAINT FK_MediaItems_Cursos
+        FOREIGN KEY(CursoId)
+        REFERENCES Cursos(CursoId)
 );
 
 CREATE TABLE Estudiantes(
@@ -194,8 +195,8 @@ CREATE TABLE Niveles(
 CREATE INDEX IX_Lecciones_CursoId
 ON Lecciones(CursoId);
 
-CREATE INDEX IX_Recursos_CursoId
-ON RecursosMultimedia(CursoId);
+CREATE INDEX IX_MediaItems_CursoId
+ON MediaItems(CursoId);
 
 CREATE INDEX IX_EstudianteCurso_Estudiante
 ON EstudianteCurso(EstudianteId);
@@ -326,7 +327,7 @@ INSERT INTO Lecciones (CursoId,Titulo,Duracion,Tipo) VALUES
 
 /* Insertar contenido multimedia dentro de los cursos */
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (1,'video','https://www.youtube.com/embed/jXUZaf5D12A','Introducción a Scratch'),
@@ -335,7 +336,7 @@ VALUES
 'https://placehold.co/600x400/FF6B6B/ffffff?text=Interfaz+Scratch',
 'Interfaz de Scratch');
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (2,'video','https://www.youtube.com/embed/Bz2HKfOmRi8','Python básico para niños'),
@@ -344,14 +345,14 @@ VALUES
 'https://placehold.co/600x400/4ECDC4/ffffff?text=Codigo+Python',
 'Código Python');
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (3,'video',
 'https://www.youtube.com/embed/salY_Sm6mv4',
 'HTML para principiantes');
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (4,'video',
@@ -362,7 +363,7 @@ VALUES
 'https://placehold.co/600x400/96CEB4/333333?text=Minecraft+Bloques',
 'Bloques de programación');
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (5,'video',
@@ -373,7 +374,7 @@ VALUES
 'https://placehold.co/600x400/FFEAA7/333333?text=Robot',
 'Componentes del robot');
 
-INSERT INTO RecursosMultimedia
+INSERT INTO MediaItems
 (CursoId,Tipo,Url,Titulo)
 VALUES
 (6,'video',
@@ -390,7 +391,7 @@ SELECT * FROM Cursos;
 
 SELECT * FROM Lecciones;
 
-SELECT * FROM RecursosMultimedia;
+SELECT * FROM MediaItems;
 
 /* ============================================================
    PARTE 2 — Script complementario de Jose Esquivel
