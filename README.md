@@ -117,8 +117,8 @@ El script crea la base de datos `InnovacionEducativa` con todas las tablas, índ
 |---------------------|-------------------------------------------------------|
 | `Cursos`            | Catálogo de cursos de programación                    |
 | `Lecciones`         | Lecciones de cada curso                               |
-| `RecursosMultimedia`| Videos e imágenes asociados a cada curso              |
-| `Estudiantes`       | Estudiantes registrados (incluye Puntos y Racha)      |
+| `MediaItems`        | Videos e imágenes asociados a cada curso              |
+| `Estudiantes`       | Estudiantes registrados (incluye puntos y racha)      |
 | `EstudianteCurso`   | Inscripciones y porcentaje de avance por curso        |
 | `ProgresoLeccion`   | Avance individual por lección (puntuación + fecha)    |
 | `SesionUso`         | Registro diario de minutos de uso por estudiante      |
@@ -127,6 +127,7 @@ El script crea la base de datos `InnovacionEducativa` con todas las tablas, índ
 | `Desafios`          | Catálogo de desafíos/retos de gamificación            |
 | `ProgresoDesafio`   | Progreso de cada estudiante en los desafíos           |
 | `Niveles`           | Niveles de gamificación con rangos de puntos          |
+| `Usuarios`          | Usuarios del sistema para autenticación y control de roles (estudiante, docente y administrador) |
 
 ---
 
@@ -193,6 +194,13 @@ La app queda en `http://localhost:5173`. El proxy de Vite redirige `/api/*` al b
 | GET    | `/api/reports/course/:cursoId`         | Reporte grupal por curso (JSON)      |
 | GET    | `/api/reports/student/:id/pdf`         | Reporte individual (PDF descargable) |
 
+### Autenticación
+
+| Método | Ruta              | Descripción       |
+|--------|-------------------|-------------------|
+| POST | /api/auth/register  | Registrar usuario |
+| POST | /api/auth/login     | Iniciar sesión    |
+
 ---
 
 ## Módulos del portal
@@ -216,6 +224,19 @@ La app queda en `http://localhost:5173`. El proxy de Vite redirige `/api/*` al b
 
 ---
 
+## Autenticación
+
+El sistema incorpora un módulo de autenticación para administrar el acceso de los usuarios a la plataforma.
+
+### Características
+
+- Registro e inicio de sesión de usuarios.
+- Gestión de roles:
+  - Estudiante
+  - Docente
+  - Administrador
+- Asociación entre la tabla `Usuarios` y `Estudiantes` para los usuarios con rol de estudiante.
+- Almacenamiento seguro de contraseñas mediante hash.
 ## Autores
 
 - **Kevin González** — Diseño de BD, módulo de cursos y recursos multimedia

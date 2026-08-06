@@ -1,11 +1,21 @@
 const PDFDocument = require("pdfkit");
 const reportService = require("../services/reportService");
 
+// Un docente/administrador puede ver el reporte de cualquier estudiante;
+// un estudiante solo puede ver el suyo propio.
+function puedeVerReporte(user, estudianteId) {
+    if (user.rol === "docente" || user.rol === "administrador") return true;
+    return user.rol === "estudiante" && Number(user.estudianteId) === Number(estudianteId);
+}
+
 const reportController = {
 
     // GET /api/reports/student/:estudianteId  (sirve tanto a docente como a padre/tutor)
     async student(req, res) {
         try {
+            if (!puedeVerReporte(req.user, req.params.estudianteId)) {
+                return res.status(403).json({ error: "No tienes permiso para ver este reporte" });
+            }
             const reporte = await reportService.getStudentReport(req.params.estudianteId);
             res.json(reporte);
         } catch (error) {
@@ -26,6 +36,9 @@ const reportController = {
     // GET /api/reports/student/:estudianteId/pdf  -> RF-22
     async studentPdf(req, res) {
         try {
+            if (!puedeVerReporte(req.user, req.params.estudianteId)) {
+                return res.status(403).json({ error: "No tienes permiso para ver este reporte" });
+            }
             const reporte = await reportService.getStudentReport(req.params.estudianteId);
 
             res.setHeader("Content-Type", "application/pdf");

@@ -518,3 +518,48 @@ GO
 SELECT * FROM Niveles;
 SELECT * FROM Insignias;
 SELECT * FROM Desafios;
+
+/* ============================================================
+   PARTE 4 — Login / Registro (autenticación y roles)
+   Agrega la tabla de Usuarios para poder iniciar sesión como
+   estudiante, docente o administrador. Un Usuario con rol
+   'estudiante' queda vinculado a su fila en Estudiantes
+   (EstudianteId); los roles 'docente' y 'administrador' no
+   necesitan un EstudianteId (usan reportes, no cursan).
+   ============================================================ */
+
+CREATE TABLE Usuarios(
+    UsuarioId INT IDENTITY(1,1) PRIMARY KEY,
+    Nombre VARCHAR(100) NOT NULL,
+    Email VARCHAR(150) NOT NULL,
+    PasswordHash VARCHAR(255) NOT NULL,
+    Rol VARCHAR(20) NOT NULL DEFAULT 'estudiante',
+    EstudianteId INT NULL,
+    FechaCreacion DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT UQ_Usuarios_Email UNIQUE (Email),
+    CONSTRAINT CK_Usuarios_Rol
+        CHECK (Rol IN ('estudiante','docente','administrador')),
+    CONSTRAINT FK_Usuarios_Estudiantes
+        FOREIGN KEY (EstudianteId)
+        REFERENCES Estudiantes(EstudianteId)
+);
+GO
+
+CREATE INDEX IX_Usuarios_Email
+ON Usuarios(Email);
+GO
+
+/* NOTA:
+   No se insertan usuarios de ejemplo porque las contraseñas
+   deben almacenarse usando hash (bcrypt), nunca en texto plano.
+
+   Para crear usuarios utiliza el endpoint:
+   POST /api/auth/register
+
+   Si deseas un administrador puedes actualizarlo manualmente:
+
+   UPDATE Usuarios
+   SET Rol = 'administrador'
+   WHERE Email = 'correo@ejemplo.com';
+*/

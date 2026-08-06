@@ -37,6 +37,11 @@ const icons = {
       <path d="M8 1a3 3 0 0 0-3 3v2H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-2V4a3 3 0 0 0-3-3zM6 4a2 2 0 1 1 4 0v2H6V4z"/>
     </svg>
   ),
+  file: (
+    <svg width="1em" height="1em" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.414A2 2 0 0 0 13.414 3L11 0.586A2 2 0 0 0 9.586 0H4zm5 1.5L13.5 4H9.5a.5.5 0 0 1-.5-.5V1.5zM4 8h8v1H4V8zm0 2.5h8v1H4v-1zM4 13h5v1H4v-1z"/>
+    </svg>
+  ),
 }
 
 export default function Icon({ name, className = '', style = {}, size = '1.5rem' }) {

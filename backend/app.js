@@ -1,9 +1,12 @@
+require("dotenv").config();
+
 const express = require("express");
 
 const app = express();
 
 app.use(express.json());
 
+const authRoutes           = require("./src/routes/authRoutes");
 const courseRoutes        = require("./src/routes/courseRoutes");
 const progressRoutes      = require("./src/routes/progressRoutes");
 const reportRoutes        = require("./src/routes/reportRoutes");
@@ -11,6 +14,7 @@ const gamificationRoutes  = require("./src/routes/gamificationRoutes");
 const mediaRoutes         = require("./src/routes/mediaRoutes");
 const userRoutes          = require("./src/routes/userRoutes");
 
+app.use("/api/auth",          authRoutes);
 app.use("/api/courses",       courseRoutes);
 app.use("/api/progress",      progressRoutes);
 app.use("/api/reports",       reportRoutes);
