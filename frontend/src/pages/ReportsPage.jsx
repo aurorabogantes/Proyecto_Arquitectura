@@ -4,7 +4,8 @@ import {
     fetchCourses,
     fetchStudentReport,
     fetchCourseReport,
-    downloadStudentReportPdf
+    downloadStudentReportPdf,
+    downloadCourseReportPdf
 } from '../services/api';
 import Icon from '../components/Icon';
 
@@ -62,6 +63,17 @@ export default function ReportsPage() {
         setDescargando(true); setError('');
         try {
             await downloadStudentReportPdf(estudianteId);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setDescargando(false);
+        }
+    };
+
+    const descargarPdfCurso = async () => {
+        setDescargando(true); setError('');
+        try {
+            await downloadCourseReportPdf(cursoId);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -136,6 +148,11 @@ export default function ReportsPage() {
                     <button className="btn btn-primary" onClick={verReporteCurso} disabled={!cursoId || cargando}>
                         Ver reporte
                     </button>
+                    {reporte && (
+                        <button className="btn btn-outline-secondary" onClick={descargarPdfCurso} disabled={descargando}>
+                            {descargando ? 'Generando PDF...' : 'Descargar PDF'}
+                        </button>
+                    )}
                 </div>
             )}
 

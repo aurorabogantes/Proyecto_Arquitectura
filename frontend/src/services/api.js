@@ -56,3 +56,22 @@ export async function downloadStudentReportPdf(estudianteId) {
     a.remove();
     window.URL.revokeObjectURL(url);
 }
+
+export async function downloadCourseReportPdf(cursoId) {
+    const res = await fetch(`${BASE}/reports/course/${cursoId}/pdf`, {
+        headers: { ...authHeaders() }
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'No se pudo generar el PDF');
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte_curso_${cursoId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+}

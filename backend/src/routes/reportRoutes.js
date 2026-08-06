@@ -13,5 +13,6 @@ router.get("/student/:estudianteId/pdf", verificarToken, controller.studentPdf);
 
 // El reporte grupal por curso es solo para docentes/administradores.
 router.get("/course/:cursoId", verificarToken, requireRole("docente", "administrador"), controller.course);
+router.get("/course/:cursoId/pdf", verificarToken, requireRole("docente", "administrador"), controller.coursePdf);
 
 module.exports = router;

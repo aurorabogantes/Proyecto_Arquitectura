@@ -77,6 +77,46 @@ const reportController = {
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
+    },
+
+    // GET /api/reports/course/:cursoId/pdf  (solo docente/administrador)
+    async coursePdf(req, res) {
+        try {
+            const reporte = await reportService.getCourseReport(req.params.cursoId);
+
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader("Content-Disposition", `attachment; filename=reporte_curso_${req.params.cursoId}.pdf`);
+
+            const doc = new PDFDocument({ margin: 50 });
+            doc.pipe(res);
+
+            doc.fontSize(18).text("Reporte grupal del curso", { align: "center" });
+            doc.moveDown();
+            doc.fontSize(12).text(`Curso: ${reporte.tituloCurso || "N/A"}`);
+            doc.text(`Generado el: ${reporte.generadoEl.toLocaleDateString("es-CR")}`);
+            doc.moveDown();
+
+            doc.fontSize(14).text("Resumen");
+            doc.fontSize(11)
+                .text(`Total de estudiantes: ${reporte.resumen.totalEstudiantes}`)
+                .text(`Completados: ${reporte.resumen.completados}`)
+                .text(`Sin avance: ${reporte.resumen.sinAvance}`)
+                .text(`Avance promedio: ${reporte.resumen.promedioAvance}%`);
+            doc.moveDown();
+
+            doc.fontSize(14).text("Estudiantes");
+            if (reporte.estudiantes.length === 0) {
+                doc.fontSize(11).text("No hay estudiantes inscritos en este curso.");
+            } else {
+                reporte.estudiantes.forEach(e => {
+                    doc.fontSize(11).text(`- ${e.nombre}: ${e.porcentaje}% (${e.completado ? "Completado" : "En progreso"})`);
+                });
+            }
+
+            doc.end();
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
     }
 
 };
