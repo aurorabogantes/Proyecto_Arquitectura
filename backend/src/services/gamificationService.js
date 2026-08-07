@@ -160,15 +160,19 @@ class GamificationService {
                 d.Descripcion?.toLowerCase().includes('inscri') ||
                 d.Titulo?.toLowerCase().includes('inscri')
             );
+            const avances = [];
             for (const d of relevantes) {
                 const progreso = Math.min(Number(total), d.Objetivo);
                 const estado = await repository.actualizarProgresoDesafio(estudianteId, d.DesafioId, progreso);
                 if (estado.completadoAhora) {
                     await repository.agregarPuntos(estudianteId, d.Recompensa);
                 }
+                avances.push({ id: d.DesafioId, titulo: d.Titulo, icono: d.Icono, progreso, objetivo: d.Objetivo, recompensa: d.Recompensa, completadoAhora: estado.completadoAhora });
             }
+            return avances;
         } catch (e) {
             console.log('evaluarDesafiosTrasInscripcion:', e.message);
+            return [];
         }
     }
 
@@ -182,6 +186,7 @@ class GamificationService {
                 repository.obtenerLeccionesSemanalesCount(estudianteId),
                 repository.obtenerCursosScratchCompletadosSemanaCount(estudianteId)
             ]);
+            const avances = [];
             for (const d of desafios) {
                 const descripcion = `${d.Titulo || ''} ${d.Descripcion || ''}`.toLowerCase();
                 const total = descripcion.includes('scratch') ? cursosScratch :
@@ -192,9 +197,12 @@ class GamificationService {
                 if (estado.completadoAhora) {
                     await repository.agregarPuntos(estudianteId, d.Recompensa);
                 }
+                if (progreso > 0) avances.push({ id: d.DesafioId, titulo: d.Titulo, icono: d.Icono, progreso, objetivo: d.Objetivo, recompensa: d.Recompensa, completadoAhora: estado.completadoAhora });
             }
+            return avances;
         } catch (e) {
             console.log('evaluarDesafiosTrasLeccion:', e.message);
+            return [];
         }
     }
 
@@ -207,6 +215,7 @@ class GamificationService {
             const relevantes = desafios.filter(d =>
                 d.Descripcion?.toLowerCase().includes('trivia')
             );
+            const avances = [];
             for (const d of relevantes) {
                 const estado = await repository.incrementarProgresoDesafio(
                     estudianteId, d.DesafioId, aciertos
@@ -214,9 +223,12 @@ class GamificationService {
                 if (estado.Completado && !estado.YaCompletado) {
                     await repository.agregarPuntos(estudianteId, d.Recompensa);
                 }
+                if (estado.Progreso > 0) avances.push({ id: d.DesafioId, titulo: d.Titulo, icono: d.Icono, progreso: estado.Progreso, objetivo: d.Objetivo, recompensa: d.Recompensa, completadoAhora: estado.Completado && !estado.YaCompletado });
             }
+            return avances;
         } catch (e) {
             console.log('evaluarDesafiosTrasTrivia:', e.message);
+            return [];
         }
     }
 

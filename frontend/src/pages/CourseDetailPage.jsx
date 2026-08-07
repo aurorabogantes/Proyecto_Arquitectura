@@ -21,13 +21,12 @@ const LEVEL_COLORS = {
 
 export default function CourseDetailPage() {
     const { id } = useParams();
-    const { studentId } = useUser();
+    const { studentId, notifyGamificationUpdate } = useUser();
 
     const [course, setCourse]           = useState(null);
     const [loading, setLoading]         = useState(true);
     const [enrolling, setEnrolling]     = useState(false);
     const [enrolled, setEnrolled]       = useState(false);
-    const [activeMedia, setMedia]       = useState(null);
     const [activeLesson, setLesson]     = useState(null);
     const [completedIds, setCompleted]  = useState(new Set());
     const { addNotification }           = useNotification();
@@ -40,7 +39,6 @@ export default function CourseDetailPage() {
                 setEnrolled((Array.isArray(progress) ? progress : []).some(
                     item => String(item.cursoId) === String(id)
                 ));
-                if (data?.mediaItems?.length > 0) setMedia(data.mediaItems[0]);
             })
             .catch(() => {})
             .finally(() => setLoading(false));
@@ -57,6 +55,17 @@ export default function CourseDetailPage() {
                 } else {
                     addNotification({ type: 'success', message: `¡Inscripción exitosa! Ahora puedes acceder a las lecciones de "${course?.title}"` });
                 }
+                (res.avancesDesafios || []).forEach(d => addNotification({
+                    type: 'challenge',
+                    message: d.completadoAhora
+                        ? `🎯 ¡Reto completado! ${d.icono} ${d.titulo} +${d.recompensa} pts`
+                        : `🎯 Progreso en reto: ${d.icono} ${d.titulo} — ${d.progreso}/${d.objetivo}`
+                }));
+                if ((res.avancesDesafios || []).length > 0) notifyGamificationUpdate();
+                (res.nuevasInsignias || []).forEach(ins => addNotification({
+                    type: 'badge',
+                    message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
+                }));
             }
         } catch {
             addNotification({ type: 'warning', message: 'Error al inscribirse. Intenta de nuevo.' });
@@ -67,10 +76,16 @@ export default function CourseDetailPage() {
 
     const handleCompleteLesson = async (lessonId) => {
         try {
-            await completeLesson(studentId, lessonId, 100);
+            const res = await completeLesson(studentId, lessonId, 100);
             setCompleted(prev => new Set([...prev, lessonId]));
-            const res = await addPoints(studentId, 0); // solo para verificar insignias tras la lección
             addNotification({ type: 'points', message: '¡Lección completada! +10 pts' });
+            (res?.avancesDesafios || []).forEach(d => addNotification({
+                type: 'challenge',
+                message: d.completadoAhora
+                    ? `🎯 ¡Reto completado! ${d.icono} ${d.titulo} +${d.recompensa} pts`
+                    : `🎯 Progreso en reto: ${d.icono} ${d.titulo} — ${d.progreso}/${d.objetivo}`
+            }));
+            if ((res?.avancesDesafios || []).length > 0) notifyGamificationUpdate();
             (res?.nuevasInsignias || []).forEach(ins => addNotification({
                 type: 'badge',
                 message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`
@@ -193,7 +208,7 @@ export default function CourseDetailPage() {
                     )}
                 </div>
 
-                {/* Right: enroll + media */}
+                {/* Right: enroll card */}
                 <div className="col-lg-4">
                     {/* Enroll card */}
                     {!enrolled && (
@@ -210,48 +225,6 @@ export default function CourseDetailPage() {
                             >
                                 {enrolling ? 'Inscribiendo...' : '¡Inscribirme ahora!'}
                             </button>
-                        </div>
-                    )}
-
-                    {/* Media player */}
-                    {course.mediaItems?.length > 0 && (
-                        <div className="card border-0 shadow-sm rounded-4 p-4">
-                            <h5 className="section-title">Material multimedia</h5>
-
-                            {/* Tabs */}
-                            <div className="d-flex flex-wrap gap-2 mb-3">
-                                {course.mediaItems.map(m => (
-                                    <button
-                                        key={m.id}
-                                        className={`btn btn-sm rounded-pill ${activeMedia?.id === m.id ? 'btn-secondary-custom' : 'btn-outline-secondary'}`}
-                                        onClick={() => setMedia(m)}
-                                    >
-                                        {m.type === 'video' ? <i className="bi bi-play-circle me-1" /> : <i className="bi bi-image me-1" />} {m.title}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {activeMedia && (
-                                <div>
-                                    {activeMedia.type === 'video' ? (
-                                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                                            <iframe
-                                                src={activeMedia.url}
-                                                title={activeMedia.title}
-                                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                                                allowFullScreen
-                                            />
-                                        </div>
-                                    ) : (
-                                        <img
-                                            src={activeMedia.url}
-                                            alt={activeMedia.title}
-                                            className="img-fluid rounded-3"
-                                        />
-                                    )}
-                                    <p className="text-muted small mt-2 mb-0">{activeMedia.title}</p>
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>

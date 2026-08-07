@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchDashboard, fetchTrivia, triviaResultado } from '../services/api';
 import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import Icon from '../components/Icon';
+
+const POLL_INTERVAL = 30_000;
 
 // Decode HTML entities returned by Open Trivia DB
 function decodeHtml(html) {
@@ -12,20 +14,42 @@ function decodeHtml(html) {
 }
 
 export default function GamificationPage() {
-    const { studentId, setUser } = useUser();
+    const { studentId, setUser, gamificationTick } = useUser();
     const [data, setData]           = useState(null);
     const [loading, setLoading]     = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState(null);
     const [activeTab, setTab]       = useState('overview');
+    const intervalRef               = useRef(null);
 
-    const loadDashboard = useCallback(() => {
-        setLoading(true);
+    const loadDashboard = useCallback((silent = false) => {
+        if (silent) setRefreshing(true);
+        else setLoading(true);
         fetchDashboard(studentId)
-            .then(d => setData(d))
+            .then(d => { setData(d); setLastUpdated(new Date()); })
             .catch(() => {})
-            .finally(() => setLoading(false));
+            .finally(() => { setLoading(false); setRefreshing(false); });
     }, [studentId]);
 
+    // Initial load
     useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+    // Refresh immediately when an action in another page updates gamification
+    useEffect(() => { if (gamificationTick > 0) loadDashboard(true); }, [gamificationTick]); // eslint-disable-line
+
+    // Polling: pause when tab is hidden
+    useEffect(() => {
+        const start = () => {
+            clearInterval(intervalRef.current);
+            intervalRef.current = setInterval(() => loadDashboard(true), POLL_INTERVAL);
+        };
+        const stop = () => clearInterval(intervalRef.current);
+        const onVisibility = () => document.hidden ? stop() : start();
+
+        start();
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+    }, [loadDashboard]);
 
     if (loading) {
         return (
@@ -59,9 +83,12 @@ export default function GamificationPage() {
                         <h2 className="fw-black mb-0">¡Hola, {user?.name}!</h2>
                         <p className="mb-0 opacity-90">Tu panel de gamificación</p>
                     </div>
-                    <div className="ms-auto d-flex gap-3">
-                        <StatPill icon={<Icon name="star" />} value={user?.points ?? 0} label="puntos" color="#FFD93D" />
-                        <StatPill icon={<Icon name="flame" />} value={user?.streak ?? 0} label="días" color="#FF6B6B" />
+                    <div className="ms-auto d-flex flex-column align-items-end gap-2">
+                        <div className="d-flex gap-3">
+                            <StatPill icon={<Icon name="star" />} value={user?.points ?? 0} label="puntos" color="#FFD93D" />
+                            <StatPill icon={<Icon name="flame" />} value={user?.streak ?? 0} label="días" color="#FF6B6B" />
+                        </div>
+                        <LiveIndicator refreshing={refreshing} lastUpdated={lastUpdated} onRefresh={() => loadDashboard(true)} />
                     </div>
                 </div>
             </div>
@@ -94,7 +121,7 @@ export default function GamificationPage() {
                 </ul>
 
                 {activeTab === 'overview'   && <OverviewTab user={user} badges={badges} challenges={challenges} />}
-                {activeTab === 'badges'     && <BadgesTab badges={badges} />}
+                {activeTab === 'badges'     && <BadgesTab badges={badges} user={user} />}
                 {activeTab === 'challenges' && (
                     <ChallengesTab challenges={challenges} />
                 )}
@@ -107,6 +134,48 @@ export default function GamificationPage() {
 }
 
 /* ─────────────────── Sub-components ─────────────────── */
+
+function LiveIndicator({ refreshing, lastUpdated, onRefresh }) {
+    const [, tick] = useState(0);
+    // Re-render every 30s to keep "hace X seg" updated
+    useEffect(() => {
+        const id = setInterval(() => tick(n => n + 1), 30_000);
+        return () => clearInterval(id);
+    }, []);
+
+    const timeAgo = lastUpdated
+        ? (() => {
+            const secs = Math.floor((Date.now() - lastUpdated) / 1000);
+            if (secs < 60) return `hace ${secs}s`;
+            return `hace ${Math.floor(secs / 60)}min`;
+        })()
+        : null;
+
+    return (
+        <div
+            className="d-flex align-items-center gap-2 px-2 py-1 rounded-3"
+            style={{ background: 'rgba(0,0,0,.2)', fontSize: '.72rem' }}
+        >
+            {refreshing
+                ? <span className="spinner-border spinner-border-sm text-warning" style={{ width: 10, height: 10, borderWidth: 2 }} />
+                : <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#6BCB77', display: 'inline-block', boxShadow: '0 0 0 2px rgba(107,203,119,.4)', animation: 'pulse-live 2s infinite' }} />
+            }
+            <span className="text-white opacity-75">
+                {refreshing ? 'Actualizando…' : `En vivo${timeAgo ? ` · ${timeAgo}` : ''}`}
+            </span>
+            {!refreshing && (
+                <button
+                    onClick={onRefresh}
+                    className="btn btn-sm p-0 border-0 text-white opacity-75 lh-1"
+                    style={{ background: 'transparent', fontSize: '.8rem' }}
+                    title="Actualizar ahora"
+                >
+                    <i className="bi bi-arrow-clockwise" />
+                </button>
+            )}
+        </div>
+    );
+}
 
 function StatPill({ icon, value, label, color }) {
     return (
@@ -202,18 +271,36 @@ function StatCard({ icon, value, label, color }) {
     );
 }
 
-function BadgesTab({ badges }) {
+function BadgesTab({ badges, user }) {
+    const earned  = badges.filter(b => b.isEarned);
+    const pending = badges.filter(b => !b.isEarned);
     return (
         <div>
-            <h5 className="section-title">Todas las insignias</h5>
-            <div className="d-flex flex-wrap gap-3">
-                {badges.map(b => <BadgeChip key={b.id} badge={b} showLocked />)}
-            </div>
+            {earned.length > 0 && (
+                <>
+                    <h5 className="section-title">Insignias obtenidas ({earned.length})</h5>
+                    <div className="d-flex flex-wrap gap-3 mb-4">
+                        {earned.map(b => <BadgeChip key={b.id} badge={b} userPoints={user?.points ?? 0} />)}
+                    </div>
+                </>
+            )}
+            {pending.length > 0 && (
+                <>
+                    <h5 className="section-title">Por desbloquear ({pending.length})</h5>
+                    <div className="row g-3">
+                        {pending.map(b => (
+                            <div key={b.id} className="col-12 col-sm-6 col-md-4">
+                                <BadgeProgress badge={b} userPoints={user?.points ?? 0} />
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
 
-function BadgeChip({ badge, showLocked = false }) {
+function BadgeChip({ badge, showLocked = false, userPoints = 0 }) {
     if (!badge.isEarned && !showLocked) return null;
     return (
         <div
@@ -225,6 +312,49 @@ function BadgeChip({ badge, showLocked = false }) {
             <div className="fw-semibold small mt-1" style={{ fontSize: '.7rem', lineHeight: 1.2 }}>
                 {badge.name}
             </div>
+        </div>
+    );
+}
+
+function BadgeProgress({ badge, userPoints }) {
+    const isPoints = !badge.special && badge.pointsRequired > 0;
+    const pct      = isPoints ? Math.min(Math.round((userPoints / badge.pointsRequired) * 100), 99) : 0;
+
+    return (
+        <div
+            className="card border-0 rounded-4 p-3 h-100"
+            style={{ background: '#f8f9fa', boxShadow: '0 2px 12px rgba(0,0,0,.05)' }}
+        >
+            <div className="d-flex align-items-center gap-3 mb-2">
+                <span style={{ fontSize: '2rem', opacity: .5 }}>{getBadgeIcon(badge)}</span>
+                <div>
+                    <div className="fw-bold small">{badge.name}</div>
+                    <div className="text-muted" style={{ fontSize: '.72rem' }}>{badge.description}</div>
+                </div>
+            </div>
+            {isPoints ? (
+                <>
+                    <div className="progress mb-1" style={{ height: 8, borderRadius: 99 }}>
+                        <div
+                            className="progress-bar"
+                            style={{
+                                width: `${pct}%`,
+                                borderRadius: 99,
+                                background: `linear-gradient(90deg, ${badge.color || '#9B59B6'}, #4ECDC4)`,
+                                transition: 'width .6s ease'
+                            }}
+                        />
+                    </div>
+                    <div className="d-flex justify-content-between" style={{ fontSize: '.7rem', color: '#888' }}>
+                        <span>{userPoints} pts</span>
+                        <span>{badge.pointsRequired} pts requeridos</span>
+                    </div>
+                </>
+            ) : (
+                <div className="text-muted" style={{ fontSize: '.72rem' }}>
+                    <i className="bi bi-lock-fill me-1" />Condición especial
+                </div>
+            )}
         </div>
     );
 }
@@ -335,6 +465,12 @@ function TriviaTab({ studentId, onRefresh }) {
                     try {
                         const res = await triviaResultado(studentId, totalAciertos);
                         addNotification({ type: 'points', message: `¡Trivia completada! +${res.puntosGanados || 0} pts` });
+                        (res?.avancesDesafios || []).forEach(d => addNotification({
+                            type: 'challenge',
+                            message: d.completadoAhora
+                                ? `🎯 ¡Reto completado! ${d.icono} ${d.titulo} +${d.recompensa} pts`
+                                : `🎯 Progreso en reto: ${d.icono} ${d.titulo} — ${d.progreso}/${d.objetivo}`
+                        }));
                         (res?.nuevasInsignias || []).forEach(ins => addNotification({
                             type: 'badge',
                             message: `¡Insignia desbloqueada! ${ins.icono} ${ins.nombre}`

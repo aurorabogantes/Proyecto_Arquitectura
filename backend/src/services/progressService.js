@@ -45,8 +45,11 @@ class ProgressService {
             throw new Error("estudianteId y leccionId son requeridos");
         }
         await repository.marcarLeccionCompletada(estudianteId, leccionId, puntuacion);
-        await gamificationService.evaluarDesafiosTrasLeccion(estudianteId);
-        return await gamificationService.addPoints(estudianteId, PUNTOS_POR_LECCION);
+        const [avancesDesafios, puntosResult] = await Promise.all([
+            gamificationService.evaluarDesafiosTrasLeccion(estudianteId),
+            gamificationService.addPoints(estudianteId, PUNTOS_POR_LECCION)
+        ]);
+        return { ...puntosResult, avancesDesafios };
     }
 
     async getActivityHistory(estudianteId) {

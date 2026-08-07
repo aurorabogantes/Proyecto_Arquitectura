@@ -24,7 +24,14 @@ async function obtenerInsignias() {
     try {
         const pool = await sql.connect(config);
         const resultado = await pool.request()
-            .query("SELECT * FROM Insignias ORDER BY InsigniaId");
+            .query(`
+                SELECT InsigniaId, Nombre, Descripcion, Icono, PuntosRequeridos, Color, Especial
+                FROM (
+                    SELECT *, ROW_NUMBER() OVER (PARTITION BY Nombre ORDER BY InsigniaId) AS rn
+                    FROM Insignias
+                ) t WHERE rn = 1
+                ORDER BY InsigniaId
+            `);
         return resultado.recordset;
     } catch (error) {
         console.log(error);
@@ -48,7 +55,14 @@ async function obtenerDesafios() {
     try {
         const pool = await sql.connect(config);
         const resultado = await pool.request()
-            .query("SELECT * FROM Desafios ORDER BY DesafioId");
+            .query(`
+                SELECT DesafioId, Titulo, Descripcion, Icono, Recompensa, Tipo, Objetivo, Expira
+                FROM (
+                    SELECT *, ROW_NUMBER() OVER (PARTITION BY Titulo ORDER BY DesafioId) AS rn
+                    FROM Desafios
+                ) t WHERE rn = 1
+                ORDER BY DesafioId
+            `);
         return resultado.recordset;
     } catch (error) {
         console.log(error);

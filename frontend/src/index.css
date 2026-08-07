@@ -75,6 +75,11 @@ body {
 .badge-item.locked { opacity: .4; filter: grayscale(1); }
 .badge-item .badge-icon { font-size: 2rem; }
 
+@keyframes pulse-live {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(107,203,119,.4); }
+    50%       { box-shadow: 0 0 0 5px rgba(107,203,119,.0); }
+}
+
 .level-bar { height: 14px; border-radius: 99px; overflow: hidden; }
 .level-bar .progress-bar {
     border-radius: 99px;

@@ -52,11 +52,11 @@ const gamificationController = {
             const { estudianteId, aciertos } = req.body;
             if (!estudianteId) return res.status(400).json({ error: 'estudianteId es requerido' });
             const n = parseInt(aciertos) || 0;
-            const [puntosResult] = await Promise.all([
+            const [puntosResult, avancesDesafios] = await Promise.all([
                 gamificationService.addPoints(parseInt(estudianteId), n * 15),
                 gamificationService.evaluarDesafiosTrasTrivia(parseInt(estudianteId), n)
             ]);
-            res.json({ success: true, puntosGanados: n * 15, nuevasInsignias: puntosResult.nuevasInsignias || [] });
+            res.json({ success: true, puntosGanados: n * 15, nuevasInsignias: puntosResult.nuevasInsignias || [], avancesDesafios });
         } catch (error) {
             res.status(400).json({ error: error.message });
         }

@@ -48,11 +48,6 @@ export default function Navbar() {
                                         <><Icon name="trophy" /> Gamificación</>
                                     </NavLink>
                                 </li>
-                                <li className="nav-item">
-                                    <NavLink className="nav-link text-white fw-semibold px-3 py-2 rounded" to="/media">
-                                        <><Icon name="video" /> Multimedia</>
-                                    </NavLink>
-                                </li>
                             </>
                         )}
                         {authUser && esStaff && (

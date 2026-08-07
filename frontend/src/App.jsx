@@ -5,7 +5,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import CoursesPage from './pages/CoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
 import GamificationPage from './pages/GamificationPage';
-import MediaLibraryPage from './pages/MediaLibraryPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ReportsPage from './pages/ReportsPage';
@@ -31,9 +30,6 @@ export default function App() {
                         } />
                         <Route path="/gamification" element={
                             <ProtectedRoute rolesPermitidos={['estudiante']}><GamificationPage /></ProtectedRoute>
-                        } />
-                        <Route path="/media" element={
-                            <ProtectedRoute rolesPermitidos={['estudiante']}><MediaLibraryPage /></ProtectedRoute>
                         } />
 
                         <Route path="/reports" element={

@@ -49,9 +49,11 @@ class CourseService {
 
     async enrollStudent(estudianteId, cursoId) {
         const resultado = await repository.inscribirEstudiante(estudianteId, cursoId);
-        await gamificationService.evaluarDesafiosTrasInscripcion(estudianteId);
-        const nuevasInsignias = await gamificationService.verificarInsignias(estudianteId);
-        return { ...resultado, nuevasInsignias };
+        const [avancesDesafios, nuevasInsignias] = await Promise.all([
+            gamificationService.evaluarDesafiosTrasInscripcion(estudianteId),
+            gamificationService.verificarInsignias(estudianteId)
+        ]);
+        return { ...resultado, nuevasInsignias, avancesDesafios };
     }
 }
 

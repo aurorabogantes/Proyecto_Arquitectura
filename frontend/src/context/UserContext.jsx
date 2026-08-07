@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { fetchUser } from "../services/api";
 import { useAuth } from "./AuthContext";
 
@@ -7,9 +7,12 @@ const UserContext = createContext(null);
 export function UserProvider({ children }) {
     const { user: authUser, token } = useAuth();
     const [user, setUser]           = useState(null);
+    const [gamificationTick, setGamificationTick] = useState(0);
 
-    // El estudiante activo es el vinculado a la cuenta que inició sesión.
     const studentId = authUser?.estudianteId || null;
+
+    // Call this anywhere to signal the GamificationPage to refresh immediately
+    const notifyGamificationUpdate = useCallback(() => setGamificationTick(n => n + 1), []);
 
     useEffect(() => {
         if (!token || !studentId) {
@@ -22,7 +25,7 @@ export function UserProvider({ children }) {
     }, [token, studentId]);
 
     return (
-        <UserContext.Provider value={{ user, setUser, studentId }}>
+        <UserContext.Provider value={{ user, setUser, studentId, gamificationTick, notifyGamificationUpdate }}>
             {children}
         </UserContext.Provider>
     );
