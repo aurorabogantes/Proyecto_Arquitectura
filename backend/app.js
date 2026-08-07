@@ -13,6 +13,7 @@ const reportRoutes        = require("./src/routes/reportRoutes");
 const gamificationRoutes  = require("./src/routes/gamificationRoutes");
 const mediaRoutes         = require("./src/routes/mediaRoutes");
 const userRoutes          = require("./src/routes/userRoutes");
+const aiRoutes            = require("./src/routes/aiRoutes");
 
 app.use("/api/auth",          authRoutes);
 app.use("/api/courses",       courseRoutes);
@@ -21,5 +22,6 @@ app.use("/api/reports",       reportRoutes);
 app.use("/api/gamification",  gamificationRoutes);
 app.use("/api/media",         mediaRoutes);
 app.use("/api/user",          userRoutes);
+app.use("/api/ai",            aiRoutes);
 
 app.listen(3000, () => console.log("Servidor corriendo en puerto 3000"));

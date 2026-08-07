@@ -37,18 +37,22 @@ async function obtenerCurso(cursoId) {
                 ORDER BY LeccionId
             `);
 
-        const mediaRes = await pool.request()
-            .input("cursoId", sql.Int, cursoId)
-            .query(`
-                SELECT MediaId, Tipo, Url, Titulo
-                FROM MediaItems WHERE CursoId = @cursoId
-                ORDER BY MediaId
-            `);
+        let mediaItems = [];
+        try {
+            const mediaRes = await pool.request()
+                .input("cursoId", sql.Int, cursoId)
+                .query(`
+                    SELECT MediaId, Tipo, Url, Titulo
+                    FROM MediaItems WHERE CursoId = @cursoId
+                    ORDER BY MediaId
+                `);
+            mediaItems = mediaRes.recordset;
+        } catch { /* tabla opcional */ }
 
         return {
             ...cursoRes.recordset[0],
             lecciones: leccionesRes.recordset,
-            mediaItems: mediaRes.recordset
+            mediaItems
         };
     } catch (error) {
         console.log(error);

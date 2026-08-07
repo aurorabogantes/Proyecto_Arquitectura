@@ -1,7 +1,43 @@
 import { useState } from 'react';
+import Editor from '@monaco-editor/react';
 import Icon from './Icon';
+import { executeCode, aiAssist } from '../services/api';
 
-/* Sample interactive activities mapped by lesson title */
+// Course category → Monaco language + Piston language id
+const COURSE_LANGUAGE = {
+    'Bloques':      'javascript',
+    'Código':       'python',
+    'Web':          'html',
+    'Juegos':       'javascript',
+    'Robótica':     'python',
+    'Pensamiento':  'python',
+};
+
+const DEFAULT_CODE = {
+    python:      '# Escribe tu código aquí\nprint("¡Hola, mundo!")\n',
+    javascript:  '// Escribe tu código aquí\nconsole.log("¡Hola, mundo!");\n',
+    html:        '<!DOCTYPE html>\n<html>\n<head><title>Mi página</title></head>\n<body>\n  <h1>¡Hola, mundo!</h1>\n</body>\n</html>\n',
+};
+
+// Curated YouTube embed URLs keyed by lesson title (all IDs verified via oEmbed)
+const LESSON_VIDEOS = {
+  // Scratch (Curso 1)
+  'Conoce la interfaz':       'https://www.youtube.com/embed/jXUZaf5D12A', // "What is Scratch?" – Scratch Team
+  'Movimiento básico':        'https://www.youtube.com/embed/jXUZaf5D12A', // reuse Scratch Team official intro
+  // Python (Curso 2)
+  '¿Qué es Python?':          'https://www.youtube.com/embed/rfscVS0vtbw', // "Learn Python" – freeCodeCamp
+  'Condicionales':             'https://www.youtube.com/embed/f4KOjWS_KZs', // "If, Then, Else in Python" – Socratica
+  // HTML & CSS (Curso 3)
+  'Estructura HTML':           'https://www.youtube.com/embed/UB1O30fR-EE', // "HTML Crash Course" – Traversy Media
+  'Colores y fuentes':         'https://www.youtube.com/embed/1PnVor36_40', // "Learn CSS in 20 Minutes" – Web Dev Simplified
+  // Minecraft / bloques (Curso 4)
+  'Comandos básicos':          'https://www.youtube.com/embed/zOjov-2OZ0E', // "Intro to Programming & CS" – freeCodeCamp
+  // Robótica (Curso 5)
+  'Componentes electrónicos':  'https://www.youtube.com/embed/O5nskjZ_GoI', // "Early Computing" – CrashCourse CS #1
+  // Lógica y algoritmos (Curso 6)
+  '¿Qué es un algoritmo?':     'https://www.youtube.com/embed/6hfOvs8pY1k', // "What's an algorithm?" – TED-Ed
+};
+
 const ACTIVITIES = {
   'Tu primer sprite': {
     steps: [
@@ -59,10 +95,8 @@ function getGenericChallenge(lesson) {
 }
 
 export default function LessonModal({ lesson, course = {}, onClose, onComplete, onEnroll, isEnrolled }) {
-  const videoItems = (course.mediaItems || []).filter(m => m.type === 'video');
-  const videoLessons = (course.lessons || []).filter(l => l.type === 'video');
-  const videoIndex = videoLessons.findIndex(l => l.id === lesson.id);
-  const matchedVideo = videoItems[videoIndex] || videoItems[0] || null;
+  const videoUrl = LESSON_VIDEOS[lesson.title] || null;
+  const language = COURSE_LANGUAGE[course.category] || 'python';
 
   return (
     <div className="modal d-block" style={{ background: 'rgba(0,0,0,.7)', zIndex: 1055 }} onClick={onClose}>
@@ -82,13 +116,16 @@ export default function LessonModal({ lesson, course = {}, onClose, onComplete, 
             ) : (
               <div className="p-4">
                 {lesson.type === 'video' && (
-                  <VideoContent video={matchedVideo} lesson={lesson} onComplete={onComplete} isEnrolled={isEnrolled} />
+                  <VideoContent videoUrl={videoUrl} lesson={lesson} onComplete={onComplete} isEnrolled={isEnrolled} />
                 )}
                 {lesson.type === 'interactive' && (
                   <InteractiveContent lesson={lesson} onComplete={onComplete} isEnrolled={isEnrolled} />
                 )}
-                {(lesson.type === 'challenge' || lesson.type === 'project') && (
+                {(lesson.type === 'challenge') && (
                   <ChallengeContent lesson={lesson} onComplete={onComplete} isEnrolled={isEnrolled} />
+                )}
+                {(lesson.type === 'project') && (
+                  <CodeProjectContent lesson={lesson} course={course} language={language} onComplete={onComplete} isEnrolled={isEnrolled} />
                 )}
               </div>
             )}
@@ -126,12 +163,17 @@ function LockedPreview({ course, lesson, onEnroll, onClose }) {
   );
 }
 
-function VideoContent({ video, lesson, onComplete, isEnrolled }) {
+function VideoContent({ videoUrl, lesson, onComplete, isEnrolled }) {
   return (
     <div>
-      {video ? (
+      {videoUrl ? (
         <div className="ratio ratio-16x9 mb-3">
-          <iframe src={video.Url} title={video.Titulo} allowFullScreen />
+          <iframe
+            src={videoUrl}
+            title={lesson.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       ) : (
         <div className="empty-state mb-3"><div className="icon"><i className="bi bi-camera-reels" /></div><p>No hay video disponible</p></div>
@@ -259,4 +301,105 @@ function typeLabel(type) {
   if (type === 'challenge') return 'Reto';
   if (type === 'project') return 'Proyecto';
   return 'Lección';
+}
+
+function CodeProjectContent({ lesson, course, language, onComplete, isEnrolled }) {
+  const [code, setCode]           = useState(DEFAULT_CODE[language] || DEFAULT_CODE.python);
+  const [output, setOutput]       = useState(null);
+  const [aiText, setAiText]       = useState(null);
+  const [running, setRunning]     = useState(false);
+  const [asking, setAsking]       = useState(false);
+  const [htmlPreview, setPreview] = useState(null);
+
+  const handleRun = async () => {
+    setRunning(true); setOutput(null); setPreview(null);
+    try {
+      // JavaScript runs entirely in the browser by capturing console.log
+      if (language === 'javascript') {
+        const logs = [];
+        const sandbox = { console: { log: (...a) => logs.push(a.map(String).join(' ')), error: (...a) => logs.push('Error: ' + a.join(' ')), warn: (...a) => logs.push('Warn: ' + a.join(' ')) } };
+        try {
+          // eslint-disable-next-line no-new-func
+          new Function(...Object.keys(sandbox), code)(...Object.values(sandbox));
+          setOutput(logs.join('\n') || '(sin salida)');
+        } catch (e) { setOutput('Error: ' + e.message); }
+        setRunning(false);
+        return;
+      }
+      const res = await executeCode(code, language);
+      if (res.html) setPreview(res.html);
+      else setOutput(res.output || res.error || '(sin salida)');
+    } catch { setOutput('Error al conectar con el servidor.'); }
+    finally { setRunning(false); }
+  };
+
+  const handleAsk = async () => {
+    setAsking(true); setAiText(null);
+    try {
+      const res = await aiAssist(code, language, lesson.title, course?.description);
+      setAiText(res.suggestion || res.error);
+    } catch { setAiText('No se pudo conectar con el asistente.'); }
+    finally { setAsking(false); }
+  };
+
+  return (
+    <div>
+      <div className="d-flex align-items-center justify-content-between mb-2">
+        <div>
+          <span className="badge rounded-pill px-3 py-1 me-2" style={{ background: '#e0d4f7', color: '#6c3fc5' }}>{language}</span>
+          <span className="text-muted small">{lesson.title}</span>
+        </div>
+        <div className="d-flex gap-2">
+          <button className="btn btn-sm btn-success rounded-pill px-3" onClick={handleRun} disabled={running}>
+            {running ? <><span className="spinner-border spinner-border-sm me-1" />Ejecutando…</> : <><i className="bi bi-play-fill me-1" />Ejecutar</>}
+          </button>
+          <button className="btn btn-sm rounded-pill px-3" style={{ background: 'linear-gradient(135deg,#9B59B6,#4ECDC4)', color: '#fff', border: 'none' }} onClick={handleAsk} disabled={asking}>
+            {asking ? <><span className="spinner-border spinner-border-sm me-1" />Preguntando…</> : <><i className="bi bi-stars me-1" />Pedir ayuda a la IA</>}
+          </button>
+        </div>
+      </div>
+
+      {/* Monaco Editor */}
+      <div className="rounded-3 overflow-hidden mb-3" style={{ border: '2px solid #dee2e6' }}>
+        <Editor
+          height="280px"
+          language={language === 'html' ? 'html' : language}
+          value={code}
+          onChange={v => setCode(v || '')}
+          theme="vs-dark"
+          options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: 'on' }}
+        />
+      </div>
+
+      {/* Output panel */}
+      {output !== null && (
+        <div className="rounded-3 p-3 mb-3" style={{ background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace', fontSize: '.85rem', whiteSpace: 'pre-wrap', maxHeight: 180, overflowY: 'auto' }}>
+          <span className="text-success fw-bold me-2">▶ Salida:</span>{output}
+        </div>
+      )}
+
+      {/* HTML preview */}
+      {htmlPreview && (
+        <div className="rounded-3 overflow-hidden mb-3" style={{ border: '2px solid #dee2e6', height: 200 }}>
+          <iframe srcDoc={htmlPreview} title="preview" style={{ width: '100%', height: '100%', border: 0 }} sandbox="allow-scripts" />
+        </div>
+      )}
+
+      {/* AI suggestion */}
+      {aiText && (
+        <div className="rounded-3 p-3 mb-3" style={{ background: 'linear-gradient(135deg,#f3e8ff,#e8f9f9)', border: '2px solid #d0b3f5' }}>
+          <div className="fw-bold mb-1" style={{ color: '#6c3fc5' }}><i className="bi bi-stars me-1" />Asistente IA</div>
+          <div className="small" style={{ whiteSpace: 'pre-wrap' }}>{aiText}</div>
+        </div>
+      )}
+
+      {isEnrolled && (
+        <div className="text-center mt-2">
+          <button className="btn btn-primary-custom px-4" onClick={onComplete}>
+            <i className="bi bi-check-lg me-1" />Marcar proyecto como completado (+10 pts)
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -157,8 +157,8 @@ class GamificationService {
                 repository.obtenerCursosInscritosHoyCount(estudianteId)
             ]);
             const relevantes = desafios.filter(d =>
-                d.Descripcion?.toLowerCase().includes('inscri') ||
-                d.Titulo?.toLowerCase().includes('inscri')
+                d.Descripcion?.toLowerCase().includes('inscr') ||
+                d.Titulo?.toLowerCase().includes('inscr')
             );
             const avances = [];
             for (const d of relevantes) {

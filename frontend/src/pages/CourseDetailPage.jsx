@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { fetchCourse, fetchStudentProgress, enrollCourse, completeLesson, addPoints } from '../services/api';
+import { fetchCourse, fetchStudentProgress, fetchLessonsProgress, enrollCourse, completeLesson, addPoints } from '../services/api';
 import { useUser } from '../context/UserContext';
 import LessonModal from '../components/LessonModal';
 import Icon from '../components/Icon';
@@ -33,12 +33,18 @@ export default function CourseDetailPage() {
 
     useEffect(() => {
         setLoading(true);
-        Promise.all([fetchCourse(id), fetchStudentProgress(studentId)])
-            .then(([data, progress]) => {
+        Promise.all([fetchCourse(id), fetchStudentProgress(studentId), fetchLessonsProgress(studentId, id)])
+            .then(([data, progress, lessons]) => {
                 setCourse(data);
                 setEnrolled((Array.isArray(progress) ? progress : []).some(
                     item => String(item.cursoId) === String(id)
                 ));
+                const done = new Set(
+                    (Array.isArray(lessons) ? lessons : [])
+                        .filter(l => l.Completado)
+                        .map(l => l.LeccionId)
+                );
+                setCompleted(done);
             })
             .catch(() => {})
             .finally(() => setLoading(false));

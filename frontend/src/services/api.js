@@ -21,6 +21,7 @@ export const fetchMe         = ()                 => get('/auth/me');
 
 // --- Estudiante / cursos / progreso / gamificación / media ---
 export const fetchStudentProgress = estudianteId    => get(`/progress/student/${estudianteId}`);
+export const fetchLessonsProgress = (estudianteId, cursoId) => get(`/progress/student/${estudianteId}/course/${cursoId}/lessons`);
 export const fetchUser         = ()                  => get('/user/current');
 export const fetchStudents     = ()                  => get('/user/students');
 export const fetchCourses      = (params = {})       => get('/courses?' + new URLSearchParams(params));
@@ -33,6 +34,10 @@ export const addPoints         = (estudianteId, puntos)   => post('/gamification
 export const fetchMediaLibrary = type => get('/media/library' + (type ? `?type=${type}` : ''));
 export const trackTime         = (estudianteId, minutos) => post('/progress/time', { estudianteId, minutos });
 export const completeLesson    = (estudianteId, leccionId, puntuacion) => post('/progress/complete-lesson', { estudianteId, leccionId, puntuacion });
+
+// --- IA: editor de código ---
+export const executeCode = (code, language)                                    => post('/ai/execute', { code, language });
+export const aiAssist    = (code, language, projectTitle, projectDescription)  => post('/ai/assist',  { code, language, projectTitle, projectDescription });
 
 // --- Reportes (docente / administrador / el propio estudiante) ---
 export const fetchStudentReport = estudianteId => get(`/reports/student/${estudianteId}`);
